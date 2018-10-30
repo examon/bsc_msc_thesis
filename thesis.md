@@ -19,9 +19,9 @@ form (a standalone application or an LLVM plugin).
 
 ## Contents
 
-- Introduction
+- [Introduction](introduction.md)
   - LLVM
-  - Internal Representation
+  - Intermediate Representation
   - Optimisations
   - clang
   - AST
@@ -45,3 +45,6 @@ form (a standalone application or an LLVM plugin).
 - Conclusion
 
 - Further development
+
+
+
