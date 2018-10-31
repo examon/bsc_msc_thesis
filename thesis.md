@@ -19,24 +19,22 @@ form (a standalone application or an LLVM plugin).
 
 ## Contents
 
-- [Introduction](introduction.md)
+- [Introductiont](introduction.md)
   - LLVM
   - Intermediate Representation
   - Optimisations
   - clang
   - AST
 
-- Design
+- [Design](design.md)
   - Call Graph
   - Path Finding
   - Dependeny Resolution
   - Extraction
 
-- Implementation
+- [Implementation](implementation.md)
+  - LLVM Pass
   - APEXPass
-    - dg
-    - json dump
-
 
 - Experiments
   - UNIX PROGRAM #1

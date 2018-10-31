@@ -6,3 +6,4 @@ http://www.aosabook.org/en/llvm.html
 2. https://llvm.org/docs/LangRef.html
 3. https://llvm.org/docs/Passes.html
 4. https://clang.llvm.org/
+5. https://llvm.org/docs/WritingAnLLVMPass.html
