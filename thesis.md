@@ -19,7 +19,9 @@ form (a standalone application or an LLVM plugin).
 
 ## Contents
 
-- [Introductiont](introduction.md)
+- [Introduction](introduction.md)
+
+- [LLVM](llvm.md)
   - LLVM
   - Intermediate Representation
   - Optimisations
