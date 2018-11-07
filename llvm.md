@@ -86,6 +86,8 @@ entry:
 
 ### IR Identifiers
 
+*[Viktor: not sure if this is required for this project]*
+
 - Two basic types:
  - local (register names, types)
  - global (functions & global variables)
@@ -127,6 +129,8 @@ for languages in the C language family" [4]
 
 
 ## AST
+
+*[Viktor: do you use AST? if not, this section is superfluous.]*
 
 - **what is AST**
 
