@@ -21,14 +21,14 @@ form (a standalone application or an LLVM plugin).
 
 - [Introduction](introduction.md)
 
-- [LLVM](llvm.md) *[Viktor: The LLVM Compiler Infrastructure]*
+- [The LLVM Compiler Infrastructure](llvm.md)
   - LLVM
   - Intermediate Representation
   - Optimisations
   - clang
   - AST
 
-- [Design](design.md) *[Viktor: Design of the Method (just Design sounds wierd)]*
+- [Design of the Method](design.md)
   - Call Graph
   - Path Finding
   - Dependeny Resolution
@@ -43,9 +43,4 @@ form (a standalone application or an LLVM plugin).
   - UNIX PROGRAM #2
 
 - Conclusion
-
-- Further development
-  *[Viktor: this should be a part of the conclusion]*
-
-
-
+  - Further development

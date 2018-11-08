@@ -5,18 +5,71 @@ References:
 
 # Design
 
+## "Big Picture"
+
+
+- we compile the C source code into IR using clang and get single IR module
+- using `APEXPass`, we do the following:
+ - parse cmd line arguments and get entry point and target instruction/line
+ - init dg and use dg data to build `apex_dg` graph of data & control
+ dependencies between IR instructions
+ - create call graph between module functions
+ - find path in call graph from entry function to function hosting target
+ instruction
+ - calculate which functions and instructions we want to keep in the final
+ executable and remove everything else
+ - inject collecting instructions that will extract data from the target
+ instruction
+ - compile this modified IR into separate binary
+
+
 ## Call Graph
 
 - **what is call graph**
- - **code sample**
- - **image of the generic call graph generate from the code sample**
+
+Call graph is a control flow graph **_[citation needed]_** that represents
+relationship between program procedures in respect to control flow.
+Lets have call graph `G = {V, E}`, where set of vertices `V` typically
+represents functions and set of edges `E` represents calls from one function
+in `V` to another.
 
 - **why do we need callgraph**
 
-- **how is our call graph represented**
- - what type of graph it is
- - what are nodes and edges
- - **image of our call graph**
+We need call graph between IR functions because we want to know the possible
+program execution flow path between source and target functions. We will use
+this computed path to calculate dependencies that will not be removed.
+
+- **call graph in our case**
+
+In our case, set `V` contains IR functions and `E` contains IR call
+instructions (although, implementation is different, conceptually this is
+accurate):
+
+ - The following code sample:
+
+``` C
+void y(void) {}
+
+void x(void) {
+  y();
+}
+
+int main(void) {
+  x();
+  return 0;
+}
+```
+
+will generate the following call graph:
+** TODO: make this image **
+
+```
+main -> x
+x -> y
+y -> [External/Nothing]
+```
+
+
 
 ## Path Finding
 

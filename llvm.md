@@ -1,4 +1,5 @@
 <!--
+
 References:
 
 [1] https://llvm.org/
@@ -84,14 +85,6 @@ entry:
 }
 ```
 
-### IR Identifiers
-
-*[Viktor: not sure if this is required for this project]*
-
-- Two basic types:
- - local (register names, types)
- - global (functions & global variables)
-
 ### High Level Structure
 
 - Module structure:
@@ -127,13 +120,9 @@ for languages in the C language family" [4]
  - Utility and Applications
  - Internal Design and Implementation
 
-
-## AST
-
-*[Viktor: do you use AST? if not, this section is superfluous.]*
-
-- **what is AST**
-
-- **AST in clang**
-
-- **Differences between clang AST and other compilers ASTs"
+- AST
+ - **what is AST**
+ - **AST in clang**
+ - **Differences between clang AST and other compilers ASTs**
+ - We will not use clangs AST, we will work directly with IR, it better suits
+ this project
