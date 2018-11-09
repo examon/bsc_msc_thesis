@@ -103,14 +103,69 @@ entry:
 
 ## Optimisations
 
-- **image of the pipeline would be good here**
+```
+References:
+https://llvm.org/docs/Passes.html
+https://llvm.org/docs/WritingAnLLVMPass.html
+https://llvm.org/docs/CommandGuide/opt.html
+```
 
-- "high level summary of the optimization features that LLVM provides" [4]
+LLVM uses the concept of Passes for the optimisations. Concrete optimisations
+are implemented as Passes that work with some portion of program code (e.g.
+Module, Function, Loop, etc.) to collect or transform this portion of the code.
 
-- **how to run optimizations?**
+There are the following types of passes:
+
+### Analysis passes
+
+Analysis passes collect information from the IR and feed it into the other
+passes.
+They can be also used for the debugging purposes, for example pass that counts
+number of functions in the module.
+
+Examples:
+- basiccg: Basic CallGraph Construction
+- dot-callgraph: Print Call Graph to “dot” file
+- instcount: Counts the various types of Instructions
+
+### Transform passes
+
+Transform passes change the program in some way. They can use some analysis pass
+that has been ran before and produced some information.
+
+Examples:
+- dce: Dead Code Elimination
+- loop-deletion: Delete dead loops
+- loop-unroll: Unroll loops
+
+###  Utility passes
+
+Utility passes do not fit into analysis passes or transform passes categories.
+
+Examples:
+- verify: Module Verifier
+- view-cfg: View CFG of function
+- instnamer: Assign names to anonymous instructions
+
+### PassManager
+
+Since user can specify to run multiple passes, LLVM uses `PassManager` class
+that takes care of scheduling passes. Scheduling is done in order to compute
+dependencies between passes and calcualte prerequisites.
+
+`PassManager` also tries to improve performance by:
+- sharing analysis results
+ - **TODO: more info?**
+- pipelining execution of the passes in order to get better cache performance
+ - **TODO: more info?**
+
+### opt
+
+- **TODO: what is opt**
+- **TODO: examples of running passes via opt**
 
 
-## clang
+# clang
 
 - "The Clang project provides a language front-end and tooling infrastructure
 for languages in the C language family" [4]
