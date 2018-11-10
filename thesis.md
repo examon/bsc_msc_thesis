@@ -55,5 +55,6 @@ TODO?
 
 - [Bibliography](bibliography.md)
 
-- [A. Archive Structure and Compilation](archive.md)
+- [A. Archive Structure, Compilation and Execution](archive.md)
   - Archive Structure
+  - Compilation and Execution of the APEXPass
