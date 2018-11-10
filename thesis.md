@@ -1,4 +1,4 @@
-<!---
+```
 Extracting Parts of Programs into Separate Binaries
 
 - Get acquainted with means of compilation of C programs using the LLVM
@@ -13,34 +13,47 @@ independent binary.
 form (a standalone application or an LLVM plugin).
 
 - Test the implemented tool on at least 2 real-world open-source C programs.
--->
+```
+
+```
+TODO?
+
+- some summary of existing/simmilar solutions?
+- move LLVM chapter into Implementation?
+
+```
 
 # Extracting Parts of Programs into Separate Binaries
 
 ## Contents
 
-- [Introduction](introduction.md)
+- [1. Introduction](introduction.md)
 
-- [The LLVM Compiler Infrastructure](llvm.md)
+- [2. The LLVM Compiler Infrastructure](llvm.md)
   - LLVM
   - Intermediate Representation
   - Optimisations
   - clang
-  - AST
 
-- [Design of the Method](design.md)
+- [3. Design of the Method](design.md)
   - Call Graph
   - Path Finding
   - Dependeny Resolution
   - Extraction
 
-- [Implementation](implementation.md)
+- [4. Implementation](implementation.md)
   - LLVM Pass
   - APEXPass
 
-- Experiments
+- [5. Experiments](experiments.md)
   - UNIX PROGRAM #1
   - UNIX PROGRAM #2
 
-- Conclusion
-  - Further development
+- [6. Conclusion](conclusion.md)
+  - Summary of the Results
+  - Further Development and Research
+
+- [Bibliography](bibliography.md)
+
+- [A. Archive Structure and Compilation](archive.md)
+  - Archive Structure

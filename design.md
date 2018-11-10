@@ -1,12 +1,4 @@
-<!--
-References:
-
--->
-
 # Design
-
-## "Big Picture"
-
 
 - we compile the C source code into IR using clang and get single IR module
 - using `APEXPass`, we do the following:
