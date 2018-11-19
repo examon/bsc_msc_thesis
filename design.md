@@ -3,6 +3,7 @@
 
 
 
+
 ```
 This should be in implementation
 - we compile the C source code into IR using clang and get single IR module
@@ -26,16 +27,106 @@ This should be in implementation
 
 ## Calculating Data Dependencies
 
-- **what do we mean by "dependency" in our situation**
- - control vs data dependencies
- - **code sample**
- - **image of the dependencies, with arrows and stuff**
+```
+References:
+https://is.muni.cz/auth/th/vik1f/?fakulta=1433;obdobi=7403;studium=763581
+```
 
-- **how do we resolve dependencies**
- - dg
- - **image using some dg export tools**
+In order to identify what parts of the IR we need to remove, we need to compute dependencies
+between instructions.
+
+We recognize two types of dependencies between IR instructions: control and data.
+Terminology comes from the Mareks work.
+
+- control dependence: "Control dependence explicitly states what nodes are controlled by
+which predicate."
+- data dependence: "A data dependence edge is between nodes n and m iff n
+defines a variable that m uses and there is no intervening definition of that
+variable on some path between n and m.  In other words, the definitions from n
+reach uses in m"
+
+The crucial information comes from data dependencies. We need to make
+sure that the IR integrity will remain intact after we are done with our transformation.
+We have to know which instructions depend which.
+We cannot afford to remove blindly any instruction, because it may happen that
+this removed instruction is needed by some other instruction.
+
+The above rationale can be demonstrated on the example below:
+
+```
+%call3 = call i32 @flag()
+store i32 %call3, i32* %f, align 4
+%0 = load i32, i32* %f, align 4
+```
+
+We have tree instructions. We call function `flag`, capture return value into
+variable `call3`, store value from `call3` into variable `f` and finally load
+value from `f` into `0`.
+
+We can see that if we would remove instruction `%call3 = call i32 @flag()`
+it would mean that `call3` is going to be undefined and instruction
+`store i32 %call3, i32* %f, align 4` would work with undefined variable.
+This would break integrity of the IR as the later computation dependent on the
+`store i32 %call3, i32* %f, align 4` would fail.
+
+We need to make sure we do not corrupt IR with undefined variables.
 
 ## Finding Connected Components Between Data Dependnecies
+
+```
+References:
+https://is.muni.cz/auth/th/vik1f/?fakulta=1433;obdobi=7403;studium=763581
+```
+
+Since we know which instruction depends on which, we can compute connected
+components of these dependent instructions within each function.
+
+Let us demonstrate on the following C functions.
+
+``` C
+int z(void) {
+  printf("z: in\n");
+  int tmp = 1;
+  return tmp;
+}
+```
+
+Above C code corresponds to the following IR:
+
+```
+define i32 @z() #0 !dbg !46 {
+entry:
+  %tmp = alloca i32, align 4
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3, i32 0, i32 0))
+  store i32 1, i32* %tmp, align 4, !dbg !49
+  %0 = load i32, i32* %tmp, align 4, !dbg !50
+  ret i32 %0, !dbg !51
+}
+```
+
+And the computed connected components.
+
+```
+FUNCTION: z
+- BLOCK:
+    %tmp = alloca i32, align 4
+    store i32 1, i32* %tmp, align 4
+    %0 = load i32, i32* %tmp, align 4
+    ret i32 %0
+- BLOCK:
+    %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3.7, i32 0, i32 0))
+```
+
+We can see that since call to `printf` is in the different component than other
+instructions. If we were to remove this `printf` call, integrity of the
+instructions in the other block would not be compromised.
+We can take advantage of this when we know for sure that we are interested
+about instructions in certain blocks and not in the others. We can proceed and
+remove full blocks and not compromise integrity.
+
+The procedure describing how are we going to pick blocks for removal and remove
+them will come later.
+
 
 ## Constructing Call Graph
 
