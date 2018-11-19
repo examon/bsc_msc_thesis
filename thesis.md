@@ -18,8 +18,11 @@ form (a standalone application or an LLVM plugin).
 ```
 TODO?
 
-- some summary of existing/simmilar solutions?
+- some summary of existing or similar solutions?
 - move LLVM chapter into Implementation?
+- write somewhere what we expect from the method, what we implemented, how it
+handles experiment and what are the results.
+
 
 ```
 

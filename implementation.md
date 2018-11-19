@@ -6,6 +6,11 @@ References:
 https://llvm.org/docs/WritingAnLLVMPass.html
 https://github.com/examon/APEX
 https://github.com/mchalupa/dg/
+
+
+TODO:
+- reasons why are we implementing APEX as a pass in LLVM and not as a standalone
+program
 ```
 
 The procedure described in the chapter [Design](design.md) is implemented
@@ -40,3 +45,5 @@ we inject collector from `lib.c`.
 
 Also, we do not care about anything after collector got its data, so we
 insert `exit` from `lib.c`.
+
+

@@ -1,21 +1,43 @@
 # Design
 
+
+
+
+```
+This should be in implementation
 - we compile the C source code into IR using clang and get single IR module
-- using `APEXPass`, we do the following:
- - parse cmd line arguments and get entry point and target instruction/line
- - init dg and use dg data to build `apex_dg` graph of data & control
- dependencies between IR instructions
- - create call graph between module functions
- - find path in call graph from entry function to function hosting target
- instruction
- - calculate which functions and instructions we want to keep in the final
- executable and remove everything else
- - inject collecting instructions that will extract data from the target
- instruction
- - compile this modified IR into separate binary
+- using debug symbols, we locate target instructions
+```
+
+- calculate data dependencies between instructions
+- compute connected components out of data dependencies between instructions
+inside every function
+- compute callgraph, mapping between connected components and functions they are calling
+- find path from source (main) and target instructions in callgraph
+- remove functions and other connected components that do not depend on the path
+
+```
+This should be in implementation
+- inject extraction function call for the target instruction
+- inject exit function call after extraction
+- strip debug symbols and recompile modified code into separate binary
+```
 
 
-## Call Graph
+## Calculating Data Dependencies
+
+- **what do we mean by "dependency" in our situation**
+ - control vs data dependencies
+ - **code sample**
+ - **image of the dependencies, with arrows and stuff**
+
+- **how do we resolve dependencies**
+ - dg
+ - **image using some dg export tools**
+
+## Finding Connected Components Between Data Dependnecies
+
+## Constructing Call Graph
 
 - **what is call graph**
 
@@ -75,18 +97,12 @@ y -> [External/Nothing]
  - BFS
  - one vs multiple paths
 
-## Dependency Resolution
+## Removing Unneeded Stuff
 
-- **what do we mean by "dependency" in our situation**
- - control vs data dependencies
- - **code sample**
- - **image of the dependencies, with arrows and stuff**
 
-- **how do we resolve dependencies**
- - dg
- - **image using some dg export tools**
 
 ## Extraction
+``` Move to implementation ```
 
 - **how do we extract remaining program**
  - adding to the path
