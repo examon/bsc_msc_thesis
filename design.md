@@ -1,9 +1,5 @@
 # Design
 
-
-
-
-
 ```
 This should be in implementation
 - we compile the C source code into IR using clang and get single IR module
@@ -76,16 +72,23 @@ We need to make sure we do not corrupt IR with undefined variables.
 ```
 References:
 https://is.muni.cz/auth/th/vik1f/?fakulta=1433;obdobi=7403;studium=763581
+
+TODO:
+- put definition of connected component somewhere
 ```
 
-Since we know which instruction depends on which, we can compute connected
-components of these dependent instructions within each function.
+Since we know that there are data dependencies between instructions, we can
+construct graph G where V is set of vertecies (in our case vertex is instruction)
+and E is set of edges (in our case, edge between vertecies V1 and V2 represents
+data dependency between instruction V1 and V2).
 
-Let us demonstrate on the following C functions.
+
+Let us demonstrate on the following example.
+Lets take this simple C function:
 
 ``` C
 int z(void) {
-  printf("z: in\n");
+  printf("hello from z\n");
   int tmp = 1;
   return tmp;
 }
@@ -94,37 +97,50 @@ int z(void) {
 Above C code corresponds to the following IR:
 
 ```
-define i32 @z() #0 !dbg !46 {
+define i32 @z() #0 {
 entry:
   %tmp = alloca i32, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3, i32 0, i32 0))
-  store i32 1, i32* %tmp, align 4, !dbg !49
-  %0 = load i32, i32* %tmp, align 4, !dbg !50
-  ret i32 %0, !dbg !51
+  %call = call i32 (i8*, ...) @printf(i8* ...)
+  store i32 1, i32* %tmp, align 4
+  %0 = load i32, i32* %tmp, align 4
+  ret i32 %0
 }
 ```
 
-And the computed connected components.
+Graph G would look like (in the adjacency list form):
+
+```
+  [%tmp = alloca i32, align 4] -> [store i32 1, i32* %tmp, align 4]
+  [%call = call i32 (i8*, ...) @printf(i8* ...)] -> []
+  [store i32 1, i32* %tmp, align 4] -> [%0 = load i32, i32* %tmp, align 4]
+  [%0 = load i32, i32* %tmp, align 4] -> [ret i32 %0]
+  [ret i32 %0] -> []
+
+```
+
+Now, we can find connected components in G easily by traversing graph using BFS.
 
 ```
 FUNCTION: z
-- BLOCK:
+- COMPONENT 1:
     %tmp = alloca i32, align 4
     store i32 1, i32* %tmp, align 4
     %0 = load i32, i32* %tmp, align 4
     ret i32 %0
-- BLOCK:
-    %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3.7, i32 0, i32 0))
+- COMPONENT 2:
+    %call = call i32 (i8*, ...) @printf(i8* ...)
 ```
 
+Having instructions within function separated into connected components comes
+useful.
 We can see that since call to `printf` is in the different component than other
 instructions. If we were to remove this `printf` call, integrity of the
-instructions in the other block would not be compromised.
+instructions in the other component would not be compromised.
 We can take advantage of this when we know for sure that we are interested
-about instructions in certain blocks and not in the others. We can proceed and
-remove full blocks and not compromise integrity.
+about instructions in certain components and not in the others. We can proceed and
+remove whole components and not compromise integrity.
 
-The procedure describing how are we going to pick blocks for removal and remove
+The procedure describing how are we going to pick components for removal and remove
 them will come later.
 
 
@@ -150,29 +166,7 @@ In our case, set `V` contains IR functions and `E` contains IR call
 instructions (although, implementation is different, conceptually this is
 accurate):
 
- - The following code sample:
-
-``` C
-void y(void) {}
-
-void x(void) {
-  y();
-}
-
-int main(void) {
-  x();
-  return 0;
-}
-```
-
-will generate the following call graph:
-** TODO: make this image **
-
-```
-main -> x
-x -> y
-y -> [External/Nothing]
-```
+- The following code sample:
 
 
 
