@@ -78,8 +78,8 @@ TODO:
 ```
 
 Since we know that there are data dependencies between instructions, we can
-construct graph G where V is set of vertecies (in our case vertex is instruction)
-and E is set of edges (in our case, edge between vertecies V1 and V2 represents
+construct graph G where V is set of vertices (in our case vertex is instruction)
+and E is set of edges (in our case, edge between vertices V1 and V2 represents
 data dependency between instruction V1 and V2).
 
 
@@ -122,67 +122,207 @@ Now, we can find connected components in G easily by traversing graph using BFS.
 
 ```
 FUNCTION: z
-- COMPONENT 1:
+- COMPONENT:
     %tmp = alloca i32, align 4
     store i32 1, i32* %tmp, align 4
     %0 = load i32, i32* %tmp, align 4
     ret i32 %0
-- COMPONENT 2:
+- COMPONENT:
     %call = call i32 (i8*, ...) @printf(i8* ...)
 ```
 
 Having instructions within function separated into connected components comes
-useful.
-We can see that since call to `printf` is in the different component than other
-instructions. If we were to remove this `printf` call, integrity of the
-instructions in the other component would not be compromised.
-We can take advantage of this when we know for sure that we are interested
-about instructions in certain components and not in the others. We can proceed and
+useful. We can see that since call to `printf` is in the different component
+than other instructions. If we were to remove this `printf` call, integrity of
+the instructions in the other component would not be compromised. We can take
+advantage of this when we know for sure that we are interested about
+instructions in certain components and not in the others. We can proceed and
 remove whole components and not compromise integrity.
 
-The procedure describing how are we going to pick components for removal and remove
-them will come later.
+The procedure describing how are we going to pick components for removal and
+remove them will come later.
 
 
 ## Constructing Call Graph
 
-- **what is call graph**
+```
+References:
+- call graph definition
 
-Call graph is a control flow graph **_[citation needed]_** that represents
-relationship between program procedures in respect to control flow.
-Lets have call graph `G = {V, E}`, where set of vertices `V` typically
-represents functions and set of edges `E` represents calls from one function
-in `V` to another.
+TODO:
 
-- **why do we need callgraph**
+```
 
-We need call graph between IR functions because we want to know the possible
-program execution flow path between source and target functions. We will use
-this computed path to calculate dependencies that will not be removed.
+**Call graph in general**
 
-- **call graph in our case**
+`citation needed & improve this, add definition of CFG` Call graph is a control
+flow graph that represents relationship between program procedures in respect
+to control flow.  Lets have call graph `G = {V, E}`, where set of vertices `V`
+typically represents functions and set of edges `E` represents calls from one
+function in `V` to another.
 
-In our case, set `V` contains IR functions and `E` contains IR call
-instructions (although, implementation is different, conceptually this is
-accurate):
+**Call graph in our case**
 
-- The following code sample:
+In our case, call graph represents relationship between individual function
+connected components and functions that these components call, more
+specifically instruction from component calls.
+
+To demonstrate more clearly what exactly is callgraph in our context, lets take
+the following C program:
+
+``` C
+int y(void) {
+  return 2;
+}
+
+int x(void) {
+  return 1;
+}
+
+int main(void) {
+  int x_ret = x();
+  int y_ret = y();
+  return 0;
+}
+```
+
+Classic callgraph would look like:
+
+```
+[main] -> [x, y]
+[x] -> []
+[y] -> []
+```
+
+`main` calls `x` and `y` while both `x` and `y` do not call anything.
+
+The IR representation of the above program:
+
+```
+define i32 @y() #0 {
+entry:
+  ret i32 2
+}
+
+define i32 @x() #0 {
+entry:
+  ret i32 1
+}
+
+define i32 @main() #0 {
+entry:
+  %retval = alloca i32, align 4
+  %x_ret = alloca i32, align 4
+  %y_ret = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  %call = call i32 @x()
+  store i32 %call, i32* %x_ret, align 4
+  %call1 = call i32 @y()
+  store i32 %call1, i32* %y_ret, align 4
+  ret i32 0
+}
+```
+
+After applying approach from the previous chapter, we get these connected
+components:
+
+```
+FUNCTION: y
+- COMPONENT: y:1
+    ret i32 2
+
+FUNCTION: x
+- COMPONENT: x:1
+    ret i32 1
+
+FUNCTION: main
+- COMPONENT: main:1
+    %retval = alloca i32, align 4
+    store i32 0, i32* %retval, align 4
+- COMPONENT: main:2
+    %x_ret = alloca i32, align 4
+    %call = call i32 @x()
+    store i32 %call, i32* %x_ret, align 4
+- COMPONENT: main:3
+    %y_ret = alloca i32, align 4
+    %call1 = call i32 @y()
+    store i32 %call1, i32* %y_ret, align 4
+- COMPONENT: main:4
+    ret i32 0
+```
+
+As was written above, call graph in our situation is mapping between individual
+components and functions that are being called within these components. That
+gives us the following structure:
+
+```
+[y:1] -> []
+[x:1] -> []
+[main:1] -> []
+[main:2] -> [x]
+[main:3] -> [y]
+[main:4] -> []
+```
+
+Having call graph represented in the structure above is beneficial for finding
+program execution flow path between specific instructions within the program in
+relation to their dependencies.
 
 
+## Finding Path from Source to Target
 
-## Path Finding
+```
+References:
+- Find some solid def of path, not from wiki, it is lame.
 
-- **what is "path" in our situation**
- - **image of the path**
+TODO:
+- some path code/picture example?
+```
 
-- **why do we need path**
- - what is source & target
+`from wiki, citation needed dude` "In graph theory, a path in a graph is a
+finite or infinite sequence of edges which connect a sequence of vertices
+which, by most definitions, are all distinct from one another."
 
-- **what algo do we use to find it**
- - BFS
- - one vs multiple paths
+In our case, sequence of vertices is  sequence of connected components and
+sequence of edges which connect these connected components are function calls
+(from one component to another component within called function).
+
+The reason why we constructed our special call graph from the connected components
+is the following: We want to find path from the source to target and in doing so,
+know which connected components are part of this path or not.
+
+Source in our case is entry point to the program, `main` functions.
+Target is supplied by the user and consists of the pair `filename, line number`.
+This pair represents specific instruction (or set of instructions when compiled
+into IR).
+
+This means that we are finding execution path from `main` function to the target
+fine of code. Potentially, there may exist infinite number of such paths.
+From the optimization standpoint, it would be fitting to find all (or at least
+as many as we can) paths from source to target and pick some path according to
+selected optimization criteria (shortest path, path with smallest connected
+components, etc.).
+
+However, for our purposes, it will be sufficient to find any path.
+We will use breadth first search to find any path and work with this path in
+the later stages (see chapter "removing unneeded stuff").
+
 
 ## Removing Unneeded Stuff
+
+```
+References:
+
+TODO:
+
+```
+
+The simplest and seemingly correct way would be to remove every connected
+component that is not part of the path that we calculated in the earlier chapter.
+
+This approach would unfortunately produce inconsistent IR. It not enough to
+remove only components in the path. We need to include every other component
+that is dependent on any other component that is already part of the path.
 
 
 

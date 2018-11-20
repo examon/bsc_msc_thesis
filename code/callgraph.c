@@ -1,10 +1,13 @@
-void y(void) {
+int y(void) {
+	return 2;
 }
 
-void x(void) {
-	y();
+int x(void) {
+	return 1;
 }
 
 int main(void) {
-	x();
+ 	int x_ret = x();
+	int y_ret = y();
+	return 0;
 }
