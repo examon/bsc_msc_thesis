@@ -1,0 +1,3 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+dig axfr @dns.server domain.name
+\end{Verbatim}

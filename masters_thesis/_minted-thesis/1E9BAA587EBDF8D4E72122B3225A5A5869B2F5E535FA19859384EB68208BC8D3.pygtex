@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+[y:1] \PYGZhy{}\PYGZgt{} []
+[x:1] \PYGZhy{}\PYGZgt{} []
+[main:1] \PYGZhy{}\PYGZgt{} []
+[main:2] \PYGZhy{}\PYGZgt{} [x]
+[main:3] \PYGZhy{}\PYGZgt{} [y]
+[main:4] \PYGZhy{}\PYGZgt{} []
+\end{Verbatim}

@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+git clone https://github.com/aboul3la/Sublist3r.git
+\PYG{n+nb}{cd} Sublist3r
+virtualenv venv
+\PYG{n+nb}{source} venv/bin/activate
+pip install \PYGZhy{}r requirements.txt
+python sublist3r.py \PYGZhy{}d ssl.com
+\end{Verbatim}

@@ -1,0 +1,4 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}\PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}1509091424\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}0.99.221.166.in\PYGZhy{}addr.arpa\PYGZdq{}}\PYG{p}{,}
+\PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}ptr\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}value\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}0.99.221.166.in\PYGZhy{}addr.arpa\PYGZdq{}}\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

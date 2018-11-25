@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n+nb}{true}
+\PYG{p}{|} openssl s\PYGZus{}client \PYGZhy{}servername www.ssl.com \PYGZhy{}connect www.ssl.com:443
+\PYG{p}{|} openssl x509 \PYGZhy{}noout \PYGZhy{}text
+\PYG{p}{|} grep \PYGZhy{}Eo \PYG{l+s+s1}{\PYGZsq{}DNS:[\PYGZca{},]+\PYGZsq{}}
+\PYG{p}{|} cut \PYGZhy{}c5\PYGZhy{}
+\end{Verbatim}

@@ -1,0 +1,14 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}
+    \PYG{n+nt}{\PYGZdq{}urlkey\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}com,ssl)/\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}20170922005637\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}filename\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}...20170922023402\PYGZhy{}00327.warc.gz\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}mime\PYGZhy{}detected\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}text/html\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}status\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}200\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}mime\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}text/html\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}digest\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}TDIYLMDHFWCTJ7HQOSSW2FT5O7RE7ZXV\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}length\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}13251\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}offset\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}858583875\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}url\PYGZdq{}}\PYG{p}{:} \PYG{l+s+s2}{\PYGZdq{}https://www.ssl.com/\PYGZdq{}}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

@@ -1,0 +1,5 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n+nv}{\PYGZpc{}call3} \PYG{p}{=} \PYG{k}{call} \PYG{k}{i32} \PYG{n+nv+vg}{@flag}\PYG{p}{()}
+\PYG{k}{store} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}call3}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}f}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+\PYG{n+nv+nvAnonymous}{\PYGZpc{}0} \PYG{p}{=} \PYG{k}{load} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}f}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+\end{Verbatim}

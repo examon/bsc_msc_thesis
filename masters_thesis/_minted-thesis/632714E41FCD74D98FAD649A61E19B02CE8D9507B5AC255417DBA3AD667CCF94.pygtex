@@ -1,0 +1,4 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kr}{HTTP}\PYG{o}{/}\PYG{l+m}{1.1} \PYG{l+m}{200} \PYG{n+ne}{OK}
+\PYG{n+na}{Set\PYGZhy{}Cookie}\PYG{o}{:} \PYG{l}{name=value}
+\end{Verbatim}

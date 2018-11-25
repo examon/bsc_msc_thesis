@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+cat base\PYGZus{}domains.txt
+\PYG{p}{|} python tld\PYGZus{}extract.py
+\PYG{p}{|} sort
+\PYG{p}{|} uniq \PYGZhy{}c
+\PYG{p}{|} sort \PYGZhy{}nr
+\end{Verbatim}

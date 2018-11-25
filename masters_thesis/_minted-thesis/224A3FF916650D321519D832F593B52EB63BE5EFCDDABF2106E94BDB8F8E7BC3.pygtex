@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+zcat \PYG{l+m}{20171027}\PYGZhy{}fdns.json.gz
+\PYG{p}{|} jq \PYGZhy{}r \PYG{l+s+s1}{\PYGZsq{}.name\PYGZsq{}}
+\PYG{p}{|} sort
+\PYG{p}{|} uniq
+\end{Verbatim}

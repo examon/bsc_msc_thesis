@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kt}{int} \PYG{n+nf}{z}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+  \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}hello from z}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+  \PYG{k+kt}{int} \PYG{n}{tmp} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{k}{return} \PYG{n}{tmp}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

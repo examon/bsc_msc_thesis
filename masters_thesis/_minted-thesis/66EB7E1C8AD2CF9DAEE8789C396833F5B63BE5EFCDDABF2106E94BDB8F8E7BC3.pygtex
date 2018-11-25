@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+zcat \PYG{l+m}{20170929}\PYGZhy{}fdns.json.gz
+\PYG{p}{|} grep \PYGZhy{}F \PYG{l+s+s1}{\PYGZsq{}.ssl.com\PYGZdq{}\PYGZsq{}} \PYG{c+c1}{\PYGZsh{} double quotes indicate end\PYGZhy{}of\PYGZhy{}word}
+\PYG{p}{|} jq \PYGZhy{}crM \PYG{l+s+s1}{\PYGZsq{}if (.name | test(\PYGZdq{}\PYGZbs{}\PYGZbs{}.ssl\PYGZbs{}\PYGZbs{}.com\PYGZdl{}\PYGZdq{})) then .name else empty end\PYGZsq{}}
+\PYG{p}{|} sort
+\PYG{p}{|} uniq
+\end{Verbatim}

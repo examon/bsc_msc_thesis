@@ -1,0 +1,24 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{define} \PYG{k}{i32} \PYG{n+nv+vg}{@y}\PYG{p}{()} \PYG{n+nv+vg}{\PYGZsh{}0} \PYG{p}{\PYGZob{}}
+\PYG{n+nl}{entry:}
+  \PYG{k}{ret} \PYG{k}{i32} \PYG{l+m}{2}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{define} \PYG{k}{i32} \PYG{n+nv+vg}{@x}\PYG{p}{()} \PYG{n+nv+vg}{\PYGZsh{}0} \PYG{p}{\PYGZob{}}
+\PYG{n+nl}{entry:}
+  \PYG{k}{ret} \PYG{k}{i32} \PYG{l+m}{1}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{define} \PYG{k}{i32} \PYG{n+nv+vg}{@main}\PYG{p}{()} \PYG{n+nv+vg}{\PYGZsh{}0} \PYG{p}{\PYGZob{}}
+\PYG{n+nl}{entry:}
+  \PYG{n+nv}{\PYGZpc{}retval} \PYG{p}{=} \PYG{k}{alloca} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv}{\PYGZpc{}x\PYGZus{}ret} \PYG{p}{=} \PYG{k}{alloca} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv}{\PYGZpc{}y\PYGZus{}ret} \PYG{p}{=} \PYG{k}{alloca} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{k}{store} \PYG{k}{i32} \PYG{l+m}{0}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}retval}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv}{\PYGZpc{}call} \PYG{p}{=} \PYG{k}{call} \PYG{k}{i32} \PYG{n+nv+vg}{@x}\PYG{p}{()}
+  \PYG{k}{store} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}call}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}x\PYGZus{}ret}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv}{\PYGZpc{}call1} \PYG{p}{=} \PYG{k}{call} \PYG{k}{i32} \PYG{n+nv+vg}{@y}\PYG{p}{()}
+  \PYG{k}{store} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}call1}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}y\PYGZus{}ret}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{k}{ret} \PYG{k}{i32} \PYG{l+m}{0}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

@@ -1,0 +1,10 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n+nl}{FUNCTION:} \PYG{err}{z}
+\PYG{err}{\PYGZhy{}} \PYG{n+nl}{COMPONENT:}
+    \PYG{n+nv}{\PYGZpc{}tmp} \PYG{p}{=} \PYG{k}{alloca} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+    \PYG{k}{store} \PYG{k}{i32} \PYG{l+m}{1}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}tmp}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+    \PYG{n+nv+nvAnonymous}{\PYGZpc{}0} \PYG{p}{=} \PYG{k}{load} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}tmp}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+    \PYG{k}{ret} \PYG{k}{i32} \PYG{n+nv+nvAnonymous}{\PYGZpc{}0}
+\PYG{err}{\PYGZhy{}} \PYG{n+nl}{COMPONENT:}
+    \PYG{n+nv}{\PYGZpc{}call} \PYG{p}{=} \PYG{k}{call} \PYG{k}{i32} \PYG{p}{(}\PYG{k}{i8}\PYG{p}{*,} \PYG{p}{...)} \PYG{n+nv+vg}{@printf}\PYG{p}{(}\PYG{k}{i8}\PYG{p}{*} \PYG{p}{...)}
+\end{Verbatim}

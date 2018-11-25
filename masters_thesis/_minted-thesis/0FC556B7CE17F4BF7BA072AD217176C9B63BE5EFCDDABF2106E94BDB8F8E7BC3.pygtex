@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+zcat \PYG{l+m}{20171013}\PYGZhy{}fdns.json.gz
+\PYG{p}{|} grep \PYGZhy{}F \PYG{l+s+s1}{\PYGZsq{}.muni.cz\PYGZdq{}\PYGZsq{}}
+\PYG{p}{|} jq \PYGZhy{}crM \PYG{l+s+s1}{\PYGZsq{}if .type == \PYGZdq{}ns\PYGZdq{} then . else empty end\PYGZsq{}}
+\PYG{p}{|} python ns\PYGZus{}group.py muni\PYGZus{}nameservers.txt
+\PYG{p}{|} python base\PYGZus{}domain.py
+\PYG{p}{|} sort
+\PYG{p}{|} uniq
+\end{Verbatim}

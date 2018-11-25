@@ -1,0 +1,3 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n+nv}{\PYGZpc{}call3} \PYG{p}{=} \PYG{k}{call} \PYG{k}{i32} \PYG{n+nv+vg}{@flag}\PYG{p}{()}
+\end{Verbatim}

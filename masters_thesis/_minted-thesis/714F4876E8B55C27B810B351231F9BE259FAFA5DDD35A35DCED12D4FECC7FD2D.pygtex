@@ -1,0 +1,3 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{store} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}call3}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}f}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+\end{Verbatim}

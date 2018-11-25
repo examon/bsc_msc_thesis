@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}
+    \PYG{n+nt}{\PYGZdq{}5\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}See draft\PYGZhy{}ietf\PYGZhy{}dnsop\PYGZhy{}refuse\PYGZhy{}any\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}1506672702\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}100.43.157.155.static.krypt.com\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}hinfo\PYGZdq{}}\PYG{p}{,}
+    \PYG{n+nt}{\PYGZdq{}value\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}ANY obsoleted\PYGZdq{}}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

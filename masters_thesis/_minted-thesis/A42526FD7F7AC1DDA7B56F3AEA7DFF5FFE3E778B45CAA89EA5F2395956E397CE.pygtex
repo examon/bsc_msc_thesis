@@ -1,0 +1,13 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}\PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}1506765777\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}example.com\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}a\PYGZdq{}}\PYG{p}{,}
+\PYG{n+nt}{\PYGZdq{}value\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}93.184.216.34\PYGZdq{}}\PYG{p}{\PYGZcb{}}
+
+\PYG{p}{\PYGZob{}}\PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}1506765777\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}example.com\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}aaaa\PYGZdq{}}\PYG{p}{,}
+\PYG{n+nt}{\PYGZdq{}value\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}2606:2800:220:1:248:1893:25c8:1946\PYGZdq{}}\PYG{p}{\PYGZcb{}}
+
+\PYG{p}{\PYGZob{}}\PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}1506788264\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}example.com\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}ns\PYGZdq{}}\PYG{p}{,}
+\PYG{n+nt}{\PYGZdq{}value\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}a.iana\PYGZhy{}servers.net\PYGZdq{}}\PYG{p}{\PYGZcb{}}
+
+\PYG{p}{\PYGZob{}}\PYG{n+nt}{\PYGZdq{}timestamp\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}1506788264\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}name\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}example.com\PYGZdq{}}\PYG{p}{,}\PYG{n+nt}{\PYGZdq{}type\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}ns\PYGZdq{}}\PYG{p}{,}
+\PYG{n+nt}{\PYGZdq{}value\PYGZdq{}}\PYG{p}{:}\PYG{l+s+s2}{\PYGZdq{}b.iana\PYGZhy{}servers.net\PYGZdq{}}\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

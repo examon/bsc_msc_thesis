@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+zcat \PYG{l+m}{20171013}\PYGZhy{}fdns.json.gz
+\PYG{p}{|} grep \PYGZhy{}F \PYG{l+s+s1}{\PYGZsq{}.muni.cz\PYGZdq{}\PYGZsq{}}
+\PYG{p}{|} jq \PYGZhy{}crM \PYG{l+s+s1}{\PYGZsq{}if (.name | test(\PYGZdq{}\PYGZbs{}\PYGZbs{}.muni\PYGZbs{}\PYGZbs{}.cz\PYGZdl{}\PYGZdq{})) then . else empty end\PYGZsq{}}
+\PYG{p}{|} jq \PYGZhy{}crM \PYG{l+s+s1}{\PYGZsq{}if .type == \PYGZdq{}ns\PYGZdq{} then .value else empty end\PYGZsq{}}
+\PYG{p}{|} sort
+\PYG{p}{|} uniq
+\PYG{p}{|} grep \PYGZhy{}E \PYG{l+s+s1}{\PYGZsq{}\PYGZbs{}.muni\PYGZbs{}.cz\PYGZdl{}\PYGZsq{}} \PYGZgt{} muni\PYGZus{}nameservers.txt
+\end{Verbatim}

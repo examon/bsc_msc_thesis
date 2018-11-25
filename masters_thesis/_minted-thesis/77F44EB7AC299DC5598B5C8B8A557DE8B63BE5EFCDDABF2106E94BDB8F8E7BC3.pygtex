@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+http \PYGZhy{}b GET \PYG{l+s+s1}{\PYGZsq{}INDEX\PYGZus{}URL/coll\PYGZhy{}cdx?url=*.ssl.com\PYGZam{}output=json\PYGZsq{}}
+\PYG{p}{|} jq \PYGZhy{}crM \PYG{l+s+s1}{\PYGZsq{}.url\PYGZsq{}}
+\PYG{p}{|} awk \PYGZhy{}F/ \PYG{l+s+s1}{\PYGZsq{}\PYGZob{}print \PYGZdl{}3\PYGZcb{}\PYGZsq{}}
+\PYG{p}{|} awk \PYGZhy{}F\PYG{l+s+se}{\PYGZbs{}?} \PYG{l+s+s1}{\PYGZsq{}\PYGZob{}print \PYGZdl{}1\PYGZcb{}\PYGZsq{}}
+\PYG{p}{|} sort
+\PYG{p}{|} uniq
+\end{Verbatim}

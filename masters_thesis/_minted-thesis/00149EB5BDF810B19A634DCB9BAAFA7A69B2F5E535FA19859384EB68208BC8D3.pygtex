@@ -1,0 +1,24 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+FUNCTION: y
+\PYGZhy{} COMPONENT: y:1
+    ret i32 2
+
+FUNCTION: x
+\PYGZhy{} COMPONENT: x:1
+    ret i32 1
+
+FUNCTION: main
+\PYGZhy{} COMPONENT: main:1
+    \PYGZpc{}retval = alloca i32, align 4
+    store i32 0, i32* \PYGZpc{}retval, align 4
+\PYGZhy{} COMPONENT: main:2
+    \PYGZpc{}x\PYGZus{}ret = alloca i32, align 4
+    \PYGZpc{}call = call i32 @x()
+    store i32 \PYGZpc{}call, i32* \PYGZpc{}x\PYGZus{}ret, align 4
+\PYGZhy{} COMPONENT: main:3
+    \PYGZpc{}y\PYGZus{}ret = alloca i32, align 4
+    \PYGZpc{}call1 = call i32 @y()
+    store i32 \PYGZpc{}call1, i32* \PYGZpc{}y\PYGZus{}ret, align 4
+\PYGZhy{} COMPONENT: main:4
+    ret i32 0
+\end{Verbatim}

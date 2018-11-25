@@ -1,0 +1,14 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}
+\PYG{k}{define} \PYG{k}{i32} \PYG{n+nv+vg}{@add}\PYG{p}{(}\PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}a}\PYG{p}{,} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}b}\PYG{p}{)} \PYG{n+nv+vg}{\PYGZsh{}0} \PYG{p}{\PYGZob{}}
+\PYG{n+nl}{entry:}
+  \PYG{n+nv}{\PYGZpc{}a.addr} \PYG{p}{=} \PYG{k}{alloca} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv}{\PYGZpc{}b.addr} \PYG{p}{=} \PYG{k}{alloca} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{k}{store} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}a}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}a.addr}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{k}{store} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}b}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}b.addr}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv+nvAnonymous}{\PYGZpc{}0} \PYG{p}{=} \PYG{k}{load} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}a.addr}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv+nvAnonymous}{\PYGZpc{}1} \PYG{p}{=} \PYG{k}{load} \PYG{k}{i32}\PYG{p}{,} \PYG{k}{i32}\PYG{p}{*} \PYG{n+nv}{\PYGZpc{}b.addr}\PYG{p}{,} \PYG{k}{align} \PYG{l+m}{4}
+  \PYG{n+nv}{\PYGZpc{}add} \PYG{p}{=} \PYG{k}{add} \PYG{k}{nsw} \PYG{k}{i32} \PYG{n+nv+nvAnonymous}{\PYGZpc{}0}\PYG{p}{,} \PYG{n+nv+nvAnonymous}{\PYGZpc{}1}
+  \PYG{k}{ret} \PYG{k}{i32} \PYG{n+nv}{\PYGZpc{}add}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}
