@@ -22,8 +22,7 @@ TODO?
 - move LLVM chapter into Implementation?
 - write somewhere what we expect from the method, what we implemented, how it
 handles experiment and what are the results.
-
-
+- shouldn't we mention other tools that can do this (or at least similar tools)
 ```
 
 # Extracting Parts of Programs into Separate Binaries

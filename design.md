@@ -1,24 +1,12 @@
-# Design
+# Design of the Method
 
-```
-This should be in implementation
-- we compile the C source code into IR using clang and get single IR module
-- using debug symbols, we locate target instructions
-```
 
 - calculate data dependencies between instructions
-- compute connected components out of data dependencies between instructions
-inside every function
+- compute connected components out of calculated data dependencies inside every function
 - compute callgraph, mapping between connected components and functions they are calling
-- find path from source (main) and target instructions in callgraph
+- find path from source to target in callgraph
 - remove functions and other connected components that do not depend on the path
 
-```
-This should be in implementation
-- inject extraction function call for the target instruction
-- inject exit function call after extraction
-- strip debug symbols and recompile modified code into separate binary
-```
 
 
 ## Calculating Data Dependencies
@@ -160,6 +148,8 @@ flow graph that represents relationship between program procedures in respect
 to control flow.  Lets have call graph `G = {V, E}`, where set of vertices `V`
 typically represents functions and set of edges `E` represents calls from one
 function in `V` to another.
+
+`TODO: put here image of stock CFG`
 
 **Call graph in our case**
 
@@ -314,8 +304,12 @@ the later stages (see chapter "removing unneeded stuff").
 References:
 
 TODO:
+- some stuff in here should be in implementation
 
 ```
+
+
+`rationale behind removing stufa & why we need it`
 
 The simplest and seemingly correct way would be to remove every connected
 component that is not part of the path that we calculated in the earlier chapter.
@@ -323,6 +317,80 @@ component that is not part of the path that we calculated in the earlier chapter
 This approach would unfortunately produce inconsistent IR. It not enough to
 remove only components in the path. We need to include every other component
 that is dependent on any other component that is already part of the path.
+
+---
+
+`Checking if we have any branching dependent on the @path`
+
+- `investigating block, collecting basic blocks`
+TBA
+
+
+- `block has no instruction in "if.*" basic block`
+
+Then do nothing
+
+
+- `block has some instruction in "if.*" basic block`
+
+TBA
+
+
+ - `Find branch instruction that services this BB and add block
+      associated with this branch instruction to the @path.`
+
+      TBA
+
+---
+
+`Computing what dependency blocks we want to keep`
+
+- `marking every block from @path as to keep`
+
+Mark as visited to make sure we do not process this block in BFS.
+
+
+- `setting up initial queue for BFS search`
+
+Go over @path and figure out if there are any calls outside the @path.
+If there are, put those called blocks for investigation into the @queue.
+
+
+- `running BFS`
+
+Run BFS from queue and add everything for keeping that is not visited.
+
+
+- `Collecting everything that we do not want to keep`
+
+We store blocks and functions that we want to remove into sets.
+
+---
+
+`Removing unwanted blocks`
+
+Remove instructions that we stored earier.
+Watch out for terminators (do not remove them).
+
+Do not erase instruction that is inside @target_instructions_
+(We need those instructions intact.)
+
+
+---
+
+`Removing unwanted functions`
+
+Invalidate all function calls to @function. This is to make sure
+that we do not have any dangling function calls to @function
+after we remove @function. This would produce segfault.
+
+
+
+
+
+
+
+
 
 
 

@@ -9,9 +9,34 @@ https://github.com/mchalupa/dg/
 
 
 TODO:
-- reasons why are we implementing APEX as a pass in LLVM and not as a standalone
-program
 ```
+
+** TODO: reasons why are we implementing APEX as a pass in LLVM and not as a standalone
+program**
+
+## LLVM
+
+`Introduction to the LLVM infra, IR, Passes and Optimizations`
+
+[LLVM](llvm.md)
+
+
+## APEX
+
+```
+This should be in implementation
+- we compile the C source code into IR using clang and get single IR module
+- using debug symbols, we locate target instructions
+```
+
+```
+This should be in implementation
+- inject extraction function call for the target instruction
+- inject exit function call after extraction
+- strip debug symbols and recompile modified code into separate binary
+```
+
+**Implementing tool as a standalone app vs llvm plugin (pass)**
 
 The procedure described in the chapter [Design](design.md) is implemented
 as LLVM Pass. Since this pass will modify code, it may be considered transform
@@ -38,7 +63,7 @@ functions and instructions can be safely deleted.
  - inject data collecting function & exit
  - remove everything not needed
 
-### Injecting Data Collect and Exit
+### Injecting Exit and Extractor
 
 We need to collect value from the target instruction. In order to do so,
 we inject collector from `lib.c`.
