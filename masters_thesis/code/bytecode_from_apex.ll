@@ -132,30 +132,23 @@ declare i32 @printf(i8*, ...) #6
 declare void @llvm.stackrestore(i8*) #5
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define i32 @foo(i32 %n) #0 {
+define i32 @bar() #0 {
 entry:
-  %n.addr = alloca i32, align 4
-  %x = alloca i32, align 4
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
-  %add = add nsw i32 %0, 10
-  store i32 %add, i32* %x, align 4
-  %_apex_extract_int_arg = load i32, i32* %x
+  %y = alloca i32, align 4
+  store i32 42, i32* %y, align 4
+  %_apex_extract_int_arg = load i32, i32* %y
   call void @_apex_extract_int(i32 %_apex_extract_int_arg)
   call void @_apex_exit(i32 0)
-  %1 = load i32, i32* %x, align 4
-  ret i32 %1
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32 @main() #0 {
 entry:
-  %some_int = alloca i32, align 4
-  %foo_result = alloca i32, align 4
-  store i32 10, i32* %some_int, align 4
-  %0 = load i32, i32* %some_int, align 4
-  %call = call i32 @foo(i32 %0)
-  store i32 %call, i32* %foo_result, align 4
+  %bar_result = alloca i32, align 4
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
   ret i32 0
 }
 

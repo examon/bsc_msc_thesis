@@ -155,27 +155,31 @@ entry:
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32 @bar() #0 !dbg !151 {
 entry:
-  ret i32 42, !dbg !154
+  %y = alloca i32, align 4
+  call void @llvm.dbg.declare(metadata i32* %y, metadata !154, metadata !16), !dbg !155
+  store i32 42, i32* %y, align 4, !dbg !155
+  %0 = load i32, i32* %y, align 4, !dbg !156
+  ret i32 %0, !dbg !157
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define i32 @main() #0 !dbg !155 {
+define i32 @main() #0 !dbg !158 {
 entry:
   %retval = alloca i32, align 4
   %some_int = alloca i32, align 4
   %foo_result = alloca i32, align 4
   %bar_result = alloca i32, align 4
   store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i32* %some_int, metadata !156, metadata !16), !dbg !157
-  store i32 10, i32* %some_int, align 4, !dbg !157
-  call void @llvm.dbg.declare(metadata i32* %foo_result, metadata !158, metadata !16), !dbg !159
-  %0 = load i32, i32* %some_int, align 4, !dbg !160
-  %call = call i32 @foo(i32 %0), !dbg !161
-  store i32 %call, i32* %foo_result, align 4, !dbg !159
-  call void @llvm.dbg.declare(metadata i32* %bar_result, metadata !162, metadata !16), !dbg !163
-  %call1 = call i32 @bar(), !dbg !164
-  store i32 %call1, i32* %bar_result, align 4, !dbg !163
-  ret i32 0, !dbg !165
+  call void @llvm.dbg.declare(metadata i32* %some_int, metadata !159, metadata !16), !dbg !160
+  store i32 10, i32* %some_int, align 4, !dbg !160
+  call void @llvm.dbg.declare(metadata i32* %foo_result, metadata !161, metadata !16), !dbg !162
+  %0 = load i32, i32* %some_int, align 4, !dbg !163
+  %call = call i32 @foo(i32 %0), !dbg !164
+  store i32 %call, i32* %foo_result, align 4, !dbg !162
+  call void @llvm.dbg.declare(metadata i32* %bar_result, metadata !165, metadata !16), !dbg !166
+  %call1 = call i32 @bar(), !dbg !167
+  store i32 %call1, i32* %bar_result, align 4, !dbg !166
+  ret i32 0, !dbg !168
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -346,15 +350,18 @@ attributes #8 = { nounwind readnone }
 !151 = distinct !DISubprogram(name: "bar", scope: !6, file: !6, line: 6, type: !152, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !5, variables: !2)
 !152 = !DISubroutineType(types: !153)
 !153 = !{!14}
-!154 = !DILocation(line: 7, column: 5, scope: !151)
-!155 = distinct !DISubprogram(name: "main", scope: !6, file: !6, line: 10, type: !152, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !5, variables: !2)
-!156 = !DILocalVariable(name: "some_int", scope: !155, file: !6, line: 11, type: !14)
-!157 = !DILocation(line: 11, column: 9, scope: !155)
-!158 = !DILocalVariable(name: "foo_result", scope: !155, file: !6, line: 13, type: !14)
-!159 = !DILocation(line: 13, column: 9, scope: !155)
-!160 = !DILocation(line: 13, column: 26, scope: !155)
-!161 = !DILocation(line: 13, column: 22, scope: !155)
-!162 = !DILocalVariable(name: "bar_result", scope: !155, file: !6, line: 14, type: !14)
-!163 = !DILocation(line: 14, column: 9, scope: !155)
-!164 = !DILocation(line: 14, column: 22, scope: !155)
-!165 = !DILocation(line: 16, column: 5, scope: !155)
+!154 = !DILocalVariable(name: "y", scope: !151, file: !6, line: 7, type: !14)
+!155 = !DILocation(line: 7, column: 9, scope: !151)
+!156 = !DILocation(line: 8, column: 12, scope: !151)
+!157 = !DILocation(line: 8, column: 5, scope: !151)
+!158 = distinct !DISubprogram(name: "main", scope: !6, file: !6, line: 11, type: !152, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false, unit: !5, variables: !2)
+!159 = !DILocalVariable(name: "some_int", scope: !158, file: !6, line: 12, type: !14)
+!160 = !DILocation(line: 12, column: 9, scope: !158)
+!161 = !DILocalVariable(name: "foo_result", scope: !158, file: !6, line: 13, type: !14)
+!162 = !DILocation(line: 13, column: 9, scope: !158)
+!163 = !DILocation(line: 13, column: 26, scope: !158)
+!164 = !DILocation(line: 13, column: 22, scope: !158)
+!165 = !DILocalVariable(name: "bar_result", scope: !158, file: !6, line: 14, type: !14)
+!166 = !DILocation(line: 14, column: 9, scope: !158)
+!167 = !DILocation(line: 14, column: 22, scope: !158)
+!168 = !DILocation(line: 16, column: 5, scope: !158)

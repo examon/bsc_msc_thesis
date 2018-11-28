@@ -201,14 +201,6 @@
 \chapter{Introduction}
 \label{chap:intro}
 
-TODO: CITATION TEST, REMOVE THIS LATER:
-
-\cite{dg}
-\cite{llvm}
-\cite{llvm-passes}
-\cite{llvm-writing-pass}
-\cite{llvm-opt}
-
 User wants to know the value of some variable in the program. He/she can run
 debugger of choice, set breakpoint at the selected variable location and let
 debugger execute input program step by step until it reaches the selected
@@ -419,16 +411,16 @@ this project
 % introduction
 
 In this chapter, we will introduce the method for extracting parts of programs
-from the provided input. The presented method will not randomly extract program
-parts, that would not be useful. Instead, the method determines what parts of
-the input program to extract according to the user input. Besides C source code,
-user also provides integer value that represents line of code corresponding to
-the input C source code. We will call this integer value \textbf{target}.
-Our procedure will subsequently calculate possible execution path up to the
-target that user provided and extracts this execution path into separate
-program.
+from the provided user input. The presented method will not randomly extract
+program parts, that would not be useful. Instead, the method determines what
+parts of the input program to extract according to the user input. Besides C
+source code, user also provides integer value that represents line of code
+corresponding to the input C source code. We will call this integer value
+\textbf{target}.  Our procedure will subsequently calculate possible execution
+path up to the target that user provided and extracts this execution path into
+the separate, functioning executable.
 
-The whole procedure from the users perspective (including the desired result we
+The whole procedure from the user perspective (including the desired result we
 want to achieve) may look like this:
 
 % next point
@@ -436,30 +428,30 @@ want to achieve) may look like this:
 \item Lets say the user provided us with the input in the form of the following
 C program source code that is stored in the file \mintinline{text}{example.c}:
 
-\begin{minted}[frame=lines, framesep=10pt,linenos]{C}
+\begin{minted}[label=example.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
-  int x = n + 10;
-  return x;
+    int x = n + 10;
+    return x;
 }
 
 int bar(void) {
-   return 42;
+    int y = 42;
+    return y;
 }
 
 int main(void) {
-  int some_int = 10;
-  int foo_result = foo(some_int);
-  int bar_result = bar();
-  return 0;
+    int some_int = 10;
+    int foo_result = foo(some_int);
+    int bar_result = bar();
+    return 0;
 }
 \end{minted}
-
 
 Since our method does not work directly with the C source code but instead
 works with the LLVM Intermediate Representation (IR), lets use clang and emit
 IR from the presented C source code in order to demonstrate our method more
 clearly:
-\footnote{
+\footnote {
 Flag \mintinline{text}{-S} tells clang to only run preprocess and
 compilation steps, while \mintinline{text}{-emit-llvm} makes sure to use the LLVM
 representation for assembler and object files. For detailed description of
@@ -471,17 +463,15 @@ various clang flags, visit
   clang -S -emit-llvm example.c -o example.s
 \end{minted}
 
-Emitted LLVM IR is stored in the \mintinline{text}{example.s} and would
-have the following contents:
-\footnote
-{
-Strictly speaking, this is not exactly the IR code that would be emmited by the
+Emitted LLVM IR is stored in the file \mintinline{text}{example.s} and would
+have the following structure:\footnote{
+Strictly speaking, this is not exactly the IR code that would be emitted by the
 clang. We have stripped it out of the module info and comments to make it more
 readable. To see the unmodified \mintinline{text}{example.s}, please go to the
 \autoref{appendix:example}.
 }
 
-\begin{minted}[frame=lines,framesep=10pt]{llvm}
+\begin{minted}[label=example.s,frame=lines,framesep=10pt]{llvm}
 define i32 @foo(i32 %n) #0 {
 entry:
   %n.addr = alloca i32, align 4
@@ -496,7 +486,10 @@ entry:
 
 define i32 @bar() #0 {
 entry:
-  ret i32 42
+  %y = alloca i32, align 4
+  store i32 42, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
 }
 
 define i32 @main() #0 {
@@ -519,61 +512,61 @@ entry:
 
 % next point
 \begin{myItemize}
-\item User also provided the line number 2 as the target, which corresponds to
-the following C code:
+\item User also provided the line number 7 from the \mintinline{text}{example.c}
+as the target, which corresponds to the following C code:
 
 \begin{minted}[frame=lines,framesep=10pt]{C}
-  int x = n + 10;
+  int y = 42;
 \end{minted}
 
-which in turn, corresponds to the following IR:
+Target C line of code corresponds in turn to the following IR instruction:
 
 \begin{minted}[frame=lines,framesep=10pt]{llvm}
-  %0 = load i32, i32* %n.addr, align 4
-  %add = add nsw i32 %0, 10
-  store i32 %add, i32* %x, align 4
+  store i32 42, i32* %y, align 4
 \end{minted}
 
-Method for finding mapping between C code and its equivalent IR instructions
-will be described in the \autoref{chap:implementation}.
+Procedure for finding mapping between C code referenced by the user input and
+its analogous IR instruction is implementation detail and will be described
+in the \autoref{chap:implementation}.
 \end{myItemize}
 
 % next point
 \begin{myItemize}
 \item Now, we can take our method, apply it on the contents of the
-\mintinline{text}{example.s} and get the following result:
+\mintinline{text}{example.s} and get the following result stored in the file
+\mintinline{text}{example_extracted.s}:
 
-\begin{minted}[frame=lines,framesep=10pt]{llvm}
-define i32 @foo(i32 %n) #0 {
+\begin{minted}[label=example\_extracted.s,frame=lines,framesep=10pt]{llvm}
+define i32 @bar() #0 {
 entry:
-  %n.addr = alloca i32, align 4
-  %x = alloca i32, align 4
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
-  %add = add nsw i32 %0, 10
-  store i32 %add, i32* %x, align 4
-  %1 = load i32, i32* %x, align 4
-  ret i32 %1
+  %y = alloca i32, align 4
+  store i32 42, i32* %y, align 4
+  ret i32 %0
 }
 
 define i32 @main() #0 {
 entry:
-  %some_int = alloca i32, align 4
-  %foo_result = alloca i32, align 4
-  store i32 10, i32* %some_int, align 4
-  %0 = load i32, i32* %some_int, align 4
-  %call = call i32 @foo(i32 %0)
-  store i32 %call, i32* %foo_result, align 4
+  %bar_result = alloca i32, align 4
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
   ret i32 0
 }
 \end{minted}
 
-As we can see, since execution path from the program entry in the
-\mintinline{text}{main} function (which we will call \textbf{source}) to the
-\textbf{target} does not include function \mintinline{text}{bar} and its
-associated instructions, hence they got removed.
+As we can see from the \mintinline{text}{example.c}, execution path from
+the program entry in the \mintinline{text}{main} function (which we will
+call \textbf{source}) to the \textbf{target} does not include function
+\mintinline{text}{foo} and its associated instructions, they can be removed.
+We are left only with function \mintinline{text}{bar} which contains target,
+and necessary instructions in the function \mintinline{text}{main} along with
+the \mintinline{text}{main} itself.
+\\
+\\
+We can now take \mintinline{text}{example_extracted.s} and recompile it back
+into the functioning executable.\footnote{
+More about recompilation in the \autoref{chap:implementation}.
+}
 \end{myItemize}
-
 
 \bigskip
 % next stuff
@@ -586,10 +579,9 @@ summarized in the following five steps:
 \item Find connected components in the computed data dependencies inside
 every function.
 \item Construct call graph, mapping between connected components and functions
-they are calling.
+that are being called from these components.
 \item Find path from source to target in the call graph.
-\item Remove functions and connected components that do not depend on the
-path.
+\item Remove dead functions and instructions that do not depend on the path.
 \end{myEnumerate}
 
 We will describe in detail each step in the remaining sections of the current
@@ -606,73 +598,93 @@ start removing functions left and right because we may remove some instruction
 that would be later needed by another instruction.
 This unwise action, may in effect produce inconsistent state, which might leave
 IR in the unwanted state or even state that would later fail to recompile back
-into the executable.
+into the functional executable.
 
 % definitions
-We recognize two types of dependencies between IR instructions:
+We recognize two types of dependencies between IR instructions: control and data
+dependencies.
+The following terminology and algorithms for computing dependencies that we use
+are due to the Marek Chalupa master's thesis \textit{Slicing of LLVM Bitcode}
+\cite{dg}.
 
+% TODO: reword this defs?
 \begin{myItemize}
-\item \textbf{Control dependence}. "Control dependence explicitly states what nodes are
-controlled by which predicate."
-\item \textbf{Data dependence}. "A data dependence edge is between nodes n and m iff n
-defines a variable that m uses and there is no intervening definition of that
-variable on some path between n and m. In other words, the definitions from n
-reach uses in m."
+\item ``\textbf{Control dependence} explicitly states what nodes are
+controlled by which predicate.``
+\item ``A \textbf{data dependence} edge is between nodes n and
+m iff n defines a variable that m uses and there is no intervening definition
+of that variable on some path between n and m. In other words, the definitions
+from n reach uses in m.``
 \end{myItemize}
-
-The terminology and algorithms for computing dependencies come from the
-master's thesis of Marek Chalupa \textit{Slicing of LLVM Bitcode} \cite{dg}.
 
 % method
 The crucial information comes from data dependencies. We need to make sure that
-the IR integrity will remain intact after we are done with our transformation.
-We have to know which instructions depend which. We cannot afford to remove
-blindly any instruction, because it may happen that this removed instruction is
-needed by some other instruction.
+the IR integrity will remain intact after we are done with removing IR
+instructions.
 
-The above rationale can be demonstrated on the example below:
+Let us demonstrate how would data dependencies look on the example from the
+previously presented \mintinline{text}{example.c} source code.
+Taking closer look specifically at the function \mintinline{text}{main}:
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-%call3 = call i32 @flag()
-store i32 %call3, i32* %f, align 4
-%0 = load i32, i32* %f, align 4
+\begin{minted}[frame=lines,framesep=10pt]{llvm}
+define i32 @main() #0 {
+entry:
+  %retval = alloca i32, align 4
+  %some_int = alloca i32, align 4
+  %foo_result = alloca i32, align 4
+  %bar_result = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  store i32 10, i32* %some_int, align 4
+  %0 = load i32, i32* %some_int, align 4
+  %call = call i32 @foo(i32 %0)
+  store i32 %call, i32* %foo_result, align 4
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
+  ret i32 0
+}
 \end{minted}
 
-We have tree instructions. We call function flag, capture return value into
-variable call3, store value from call3 into variable f and finally load value
-from f into 0.
+Looking at the \mintinline{text}{main}, we can construct graph G where V is set
+of vertices (in our case vertex is instruction) and E is set of edges (in our
+case, edge between vertices V1 and V2 represents data dependency between
+instruction V1 and V2).
+\footnote{
+We compute data dependencies using tool \mintinline{text}{dg}
+For more info please visit \url{https://github.com/mchalupa/dg} \cite{dg}.
+We will take a closer look at \mintinline{text}{dg} in the
+\autoref{chap:implementation}.
+}
 
-We can see that if we would remove instruction
+Computed data dependency graph for instructions from the function
+\mintinline{text}{main} is presented in the \autoref{fig:data_deps_graph}.
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-%call3 = call i32 @flag()
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_dependencies.pdf}
+    \caption{Data dependencies graph of the \mintinline{text}{main} function instructions.}
+    \label{fig:data_deps_graph}
+\end{figure}
+
+Lets take a closer look at the instruction:
+\mintinline{llvm}{%some_int = alloca i32, align 4}.
+We can see that the following instructions have data dependency on the
+\mintinline{llvm}{%some_int}
+
+\begin{minted}[frame=lines,framesep=10pt, escapeinside=||]{llvm}
+  store i32 10, i32* %some_int, align 4
+  %0 = load i32, i32* %some_int, align 4
 \end{minted}
 
-it would mean that call3 is going to be undefined and instruction
+It is apparent that both instructions need \mintinline{llvm}{%some_int} for
+their operand. If we were going to remove
+\mintinline{llvm}{%some_int = alloca i32, align 4}
+without taking into consideration that there are two
+instructions that depend on it, we would get into inconsistent state and two
+dependent instructions would contain undefined values as their operand.
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-store i32 %call3, i32* %f, align 4
-\end{minted}
-
-would work with undefined variable. This would break integrity of the IR as the
-later computation dependent on the
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-store i32 %call3, i32* %f, align 4
-\end{minted}
-
-would fail.
-
-We need to make sure we do not corrupt IR with undefined variables.
-
+This would clearly lead into unsuccessful recompilation back into the executable.
+In the next chapter, we will discuss how to identify and deal with these kinds
+of situations.
 
 % === SECTION ===
 \section{Finding Connected Components}
@@ -680,207 +692,110 @@ We need to make sure we do not corrupt IR with undefined variables.
 
 % References% TODO: put definition of connected component somewhere
 
-Since we know that there are data dependencies between instructions, we can
-construct graph G where V is set of vertices (in our case vertex is
-instruction) and E is set of edges (in our case, edge between vertices V1 and
-V2 represents data dependency between instruction V1 and V2).
+% motivation
+We have shown what are inter-instruction data dependencies and how they are
+important, but they do not fully solve our problem. If we want to remove
+some instruction, it is not enough to know what are the immediate neighbors
+in the data dependency graph.
 
-Let us demonstrate on the following example. Lets take this simple C function:
+%definitions & method
+We can observe, that instruction dependencies tend to cluster and form
+components.
+Lets take the previously computed dependency graph G and find its connected
+components. We will run \emph{Breadth-first search} \cite{clrs} to go
+and visit each instruction. If the instruction is not in any component lets
+create one and put this instruction inside. If visited instruction is already
+in existing component, just skip it and go to the next instruction.
+\textbf{TODO: pseudocode}
+% TODO: this would be nicely formatted as a pseudocode
+% TODO: https://github.com/examon/APEX/blob/197e7a6ec89b7127591df11df0972ff7640d9f00/apex/apex.cpp#L521
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{C}
-int z(void) {
-  printf("hello from z\n");
-  int tmp = 1;
-  return tmp;
-}
-\end{minted}
+After running the above mentioned algorithm, we get the following graph, where
+connected components are denoted with different color:
 
-Above C code corresponds to the following IR:
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_components.pdf}
+    \caption{Connected components of the data dependencies graph
+    for the \mintinline{text}{main} function instructions. Individual components
+    are differentiated by the color.}
+    \label{fig:connected_components_graph}
+\end{figure}
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-define i32 @z() #0 {
-entry:
-  %tmp = alloca i32, align 4
-  %call = call i32 (i8*, ...) @printf(i8* ...)
-  store i32 1, i32* %tmp, align 4
-  %0 = load i32, i32* %tmp, align 4
-  ret i32 %0
-}
-\end{minted}
+Having instructions within each function separated into connected components
+comes useful especially when we want to figure out if we can safely remove
+specific instruction.
 
-Graph G would look like (in the adjacency list form):
+Lets take \mintinline{llvm}{%call = call i32 @foo(i32 %0)} as an example.
+Having computed connected components, we can see that this instruction
+belongs to the \emph{yellow} connected component.
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{text}
-[%tmp = alloca i32, align 4] -> [store i32 1, i32* %tmp, align 4]
-[%call = call i32 (i8*, ...) @printf(i8* ...)] -> []
-[store i32 1, i32* %tmp, align 4] -> [%0 = load i32, i32* %tmp, align 4]
-[%0 = load i32, i32* %tmp, align 4] -> [ret i32 %0]
-[ret i32 %0] -> []
-\end{minted}
+Now, if we were not interested in this particular instruction and wanted to
+remove it, we now know that we need to take care a closer look at the whole
+component and not only on one particular instruction.
 
-Now, we can find connected components in G easily by traversing graph using BFS.
+It would not be sufficient to only remove
+\mintinline{llvm}{%call = call i32 @foo(i32 %0)} because there are other
+instructions within the same component, which means that other members of the
+\emph{yellow} component are in dependency relationship with each other.
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{text}
-FUNCTION: z
-- COMPONENT:
-    %tmp = alloca i32, align 4
-    store i32 1, i32* %tmp, align 4
-    %0 = load i32, i32* %tmp, align 4
-    ret i32 %0
-- COMPONENT:
-    %call = call i32 (i8*, ...) @printf(i8* ...)
-\end{minted}
-
-Having instructions within function separated into connected components comes
-useful. We can see that since call to printf is in the different component than
-other instructions. If we were to remove this printf call, integrity of the
-instructions in the other component would not be compromised. We can take
-advantage of this when we know for sure that we are interested about
-instructions in certain components and not in the others. We can proceed and
-remove whole components and not compromise integrity.
-
-The procedure describing how are we going to pick components for removal and
-remove them will come later.
+The good thing is that if we were to remove some unwanted instruction,
+for instance \mintinline{llvm}{%retval = alloca i32, align 4} from the \emph{blue} component
+we now have the information and know that we should remove also
+\mintinline{llvm}{store i32 0, i32* %retval, align 4}. This way, we will not
+leave any instructions stranded and with missing dependencies.
+As we mentioned earlier, this will ensure that the IR is in the consistent state
+and we will be able to recompile the modified IR back into the functioning
+executable.
 
 % === SECTION ===
-\section{Constructing Call Graph}
+\section{Computing Call Graph}
 \label{sec:design-callgraph}
 
-% References: some call graph definition
+%motivation
+In respect to the program execution flow, user provided us the the target and
+we know the source, which is entry to the program
+(\mintinline{text}{main} function).
+In order to proceed further, we need to know what possible routes can execution
+of the program follow. Computing and walking the call graph of the program
+can produce for us this piece of information.
 
-Call graph in general
+%definition
+% TODO: citation needed & improve this, add definition of CFG
+\textbf{Call graph}\footnote{
+More technically, \emph{call multigraph} \cite{data_flow}.}
+is a control flow graph that represents relationship
+between program procedures in respect to control flow \cite{data_flow}.
+Lets have a call graph $G = \{V, E\}$.
+Then, set of vertices $V$ typically represents functions and set of edges $E$
+represents transfer of control flow from one function to another.
 
-% citation needed & improve this, add definition of CFG
-Call graph is a control flow graph that represents relationship between program
-procedures in respect to control flow. Lets have call graph G = {V, E}, where
-set of vertices V typically represents functions and set of edges E represents
-calls from one function in V to \texttt{another}.
+In our context, call graph represents relationship between individual
+connected components (computed in the \autoref{sec:design-components})
+and functions that are being called from these components by one of its
+instructions.
 
-TODO: put here image of stock CFG
+To demonstrate clearly what exactly is call graph in our situation, lets take
+the computed components as shown in the \autoref{fig:connected_components_graph}
+and compute call graph (\autoref{fig:call_graph}).
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_callgraph.pdf}
+    \caption{Call graph computed from the connected components
+    as shown in the \autoref{fig:connected_components_graph}.}
+    \label{fig:call_graph}
+\end{figure}
 
-Call graph in our case
+\textbf{TODO: pseudocode}
+The way we compute call graph is simply running \emph{Breadth-first search}
+to visit all vertices.
+Upon visiting call instruction\footnote{\url{https://llvm.org/doxygen/classllvm_1_1CallInst.html}},
+we remember what function is being called and the source of the call.
 
-In our case, call graph represents relationship between individual function
-connected components and functions that these components call, more
-specifically instruction from component calls.
-
-To demonstrate more clearly what exactly is callgraph in our context, lets take
-the following C program:
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{C}
-int y(void) {
-  return 2;
-}
-
-int x(void) {
-  return 1;
-}
-
-int main(void) {
-  int x_ret = x();
-  int y_ret = y();
-  return 0;
-}
-\end{minted}
-
-Classic callgraph would look like:
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{text}
-[main] -> [x, y]
-[x] -> []
-[y] -> []
-\end{minted}
-
-main calls x and y while both x and y do not call anything.
-
-The IR representation of the above program:
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-define i32 @y() #0 {
-entry:
-  ret i32 2
-}
-
-define i32 @x() #0 {
-entry:
-  ret i32 1
-}
-
-define i32 @main() #0 {
-entry:
-  %retval = alloca i32, align 4
-  %x_ret = alloca i32, align 4
-  %y_ret = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %call = call i32 @x()
-  store i32 %call, i32* %x_ret, align 4
-  %call1 = call i32 @y()
-  store i32 %call1, i32* %y_ret, align 4
-  ret i32 0
-}
-\end{minted}
-
-After applying approach from the previous chapter, we get these connected
-components:
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{text}
-FUNCTION: y
-- COMPONENT: y:1
-    ret i32 2
-
-FUNCTION: x
-- COMPONENT: x:1
-    ret i32 1
-
-FUNCTION: main
-- COMPONENT: main:1
-    %retval = alloca i32, align 4
-    store i32 0, i32* %retval, align 4
-- COMPONENT: main:2
-    %x_ret = alloca i32, align 4
-    %call = call i32 @x()
-    store i32 %call, i32* %x_ret, align 4
-- COMPONENT: main:3
-    %y_ret = alloca i32, align 4
-    %call1 = call i32 @y()
-    store i32 %call1, i32* %y_ret, align 4
-- COMPONENT: main:4
-    ret i32 0
-\end{minted}
-
-As was written above, call graph in our situation is mapping between individual
-components and functions that are being called within these components. That
-gives us the following structure:
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{text}
-[y:1] -> []
-[x:1] -> []
-[main:1] -> []
-[main:2] -> [x]
-[main:3] -> [y]
-[main:4] -> []
-\end{minted}
-
-Having call graph represented in the structure above is beneficial for finding
+Having call graph represented in the structure as shown in the
+\autoref{fig:call_graph}
+is beneficial for finding
 program execution flow path between specific instructions within the program in
 relation to their dependencies.
 
@@ -1126,7 +1041,10 @@ entry:
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32 @bar() #0 {
 entry:
-  ret i32 42
+  %y = alloca i32, align 4
+  store i32 42, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -1155,4 +1073,9 @@ attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sq
 !1 = !{!"clang version 5.0.1 (tags/RELEASE_500/final)"}
 \end{minted}
 
+
+
+
+
+% === END ======================================================================
 \end{document}

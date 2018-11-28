@@ -1,0 +1,83 @@
+%retval = alloca i32, align 4
+%some_int = alloca i32, align 4
+%foo_result = alloca i32, align 4
+%bar_result = alloca i32, align 4
+store i32 0, i32* %retval, align 4
+store i32 10, i32* %some_int, align 4
+%0 = load i32, i32* %some_int, align 4
+%call = call i32 @foo(i32 %0)
+store i32 %call, i32* %foo_result, align 4
+%call1 = call i32 @bar()
+store i32 %call1, i32* %bar_result, align 4
+ret i32 0
+
+
+- node:  %retval = alloca i32, align 4
+[dd]:
+  store i32 0, i32* %retval, align 4
+
+- node:  %some_int = alloca i32, align 4
+[dd]:
+  store i32 10, i32* %some_int, align 4
+  %0 = load i32, i32* %some_int, align 4
+
+- node:  %foo_result = alloca i32, align 4
+[dd]:
+  store i32 %call, i32* %foo_result, align 4
+
+- node:  %bar_result = alloca i32, align 4
+[dd]:
+  store i32 %call1, i32* %bar_result, align 4
+
+- node:  store i32 0, i32* %retval, align 4
+[dd]:
+
+- node:  store i32 10, i32* %some_int, align 4
+[dd]:
+  %0 = load i32, i32* %some_int, align 4
+
+- node:  %0 = load i32, i32* %some_int, align 4
+[dd]:
+  %call = call i32 @foo(i32 %0)
+
+- node:  %call = call i32 @foo(i32 %0)
+[dd]:
+  store i32 %call, i32* %foo_result, align 4
+
+- node:  store i32 %call, i32* %foo_result, align 4, !dbg !19
+[dd]:
+
+- node:  %call1 = call i32 @bar(), !dbg !24
+[dd]:
+  store i32 %call1, i32* %bar_result, align 4, !dbg !23
+
+- node:  store i32 %call1, i32* %bar_result, align 4, !dbg !23
+[dd]:
+
+- node:  ret i32 0, !dbg !25
+[dd]:
+
+
+FUNCTION: main
+- COMPONENT:
+    %retval = alloca i32, align 4
+    store i32 0, i32* %retval, align 4
+- COMPONENT:
+    %some_int = alloca i32, align 4
+    %foo_result = alloca i32, align 4
+    store i32 10, i32* %some_int, align 4, !dbg !17
+    %0 = load i32, i32* %some_int, align 4, !dbg !20
+    %call = call i32 @foo(i32 %0), !dbg !21
+    store i32 %call, i32* %foo_result, align 4, !dbg !19
+- COMPONENT:
+    %bar_result = alloca i32, align 4
+    %call1 = call i32 @bar(), !dbg !24
+    store i32 %call1, i32* %bar_result, align 4, !dbg !23
+- COMPONENT:
+    ret i32 0, !dbg !25
+
+
+
+
+
+

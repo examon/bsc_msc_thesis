@@ -19,7 +19,10 @@ entry:
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32 @bar() #0 {
 entry:
-  ret i32 42
+  %y = alloca i32, align 4
+  store i32 42, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
