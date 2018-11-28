@@ -168,26 +168,22 @@
 \end{ThesisDeclaration}
 
 \begin{ThesisThanks}
-    Thesis Thanks TBA - Thesis Thanks TBA - Thesis Thanks TBA
-    Thesis Thanks TBA - Thesis Thanks TBA - Thesis Thanks TBA
-    Thesis Thanks TBA - Thesis Thanks TBA - Thesis Thanks TBA
-    Thesis Thanks TBA - Thesis Thanks TBA - Thesis Thanks TBA
-    Thesis Thanks TBA - Thesis Thanks TBA - Thesis Thanks TBA
-    Thesis Thanks TBA - Thesis Thanks TBA - Thesis Thanks TBA
+Dedicated to those who are brave enough to read this stuff.
+
+You are heroes!
+
+\bigskip
+\begin{figure}[ht]
+    \includegraphics[width=320px]{images/one_does_not_simply.jpg}
+\end{figure}
+
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
-    Thesis Abstract TBA - Thesis Abstract TBA - Thesis Abstract TBA
-    Thesis Abstract TBA - Thesis Abstract TBA - Thesis Abstract TBA
-    Thesis Abstract TBA - Thesis Abstract TBA - Thesis Abstract TBA
-    Thesis Abstract TBA - Thesis Abstract TBA - Thesis Abstract TBA
-    Thesis Abstract TBA - Thesis Abstract TBA - Thesis Abstract TBA
-    Thesis Abstract TBA - Thesis Abstract TBA - Thesis Abstract TBA
+    abstract TBA
 \end{ThesisAbstract}
 
 \begin{ThesisKeyWords}
-    keyword, keyword, keyword, keyword, keyword, keyword,
-    keyword, keyword, keyword, keyword, keyword, keyword,
     keyword, keyword, keyword, keyword, keyword, keyword
 \end{ThesisKeyWords}
 
@@ -198,7 +194,7 @@
 
 
 % === CHAPTER ==================================================================
-\chapter{Introduction}
+\chapter{Introduction: TODO}
 \label{chap:intro}
 
 User wants to know the value of some variable in the program. He/she can run
@@ -259,7 +255,7 @@ results of this thesis and describes possible further research and development
 opportunities.
 
 
-\chapter{The LLVM Compiler Infrastructure}
+\chapter{The LLVM Compiler Infrastructure: TODO}
 \label{chap:llvm}
 
 "The LLVM (FOOTNOTE:The name "LLVM" itself is not an acronym; it is the full
@@ -405,7 +401,7 @@ this project
 
 
 % === CHAPTER: Design of the Method ============================================
-\chapter{Extracting Program Subsets}
+\chapter{Extracting Program Subsets: WIP}
 \label{chap:design}
 
 % introduction
@@ -514,14 +510,15 @@ entry:
 \begin{myItemize}
 \item User also provided the line number 7 from the \mintinline{text}{example.c}
 as the target, which corresponds to the following C code:
+\smallskip
 
-\begin{minted}[frame=lines,framesep=10pt]{C}
+\begin{minted}[label={target C line},frame=lines,framesep=10pt]{C}
   int y = 42;
 \end{minted}
 
 Target C line of code corresponds in turn to the following IR instruction:
 
-\begin{minted}[frame=lines,framesep=10pt]{llvm}
+\begin{minted}[label={target IR instruction},frame=lines,framesep=10pt]{llvm}
   store i32 42, i32* %y, align 4
 \end{minted}
 
@@ -581,7 +578,7 @@ every function.
 \item Construct call graph, mapping between connected components and functions
 that are being called from these components.
 \item Find path from source to target in the call graph.
-\item Remove dead functions and instructions that do not depend on the path.
+\item Eliminate dead components and functions that do not depend on the path.
 \end{myEnumerate}
 
 We will describe in detail each step in the remaining sections of the current
@@ -753,7 +750,7 @@ executable.
 \label{sec:design-callgraph}
 
 %motivation
-In respect to the program execution flow, user provided us the the target and
+In respect to the program execution flow, user provided us the target and
 we know the source, which is entry to the program
 (\mintinline{text}{main} function).
 In order to proceed further, we need to know what possible routes can execution
@@ -765,7 +762,7 @@ can produce for us this piece of information.
 \textbf{Call graph}\footnote{
 More technically, \emph{call multigraph} \cite{data_flow}.}
 is a control flow graph that represents relationship
-between program procedures in respect to control flow \cite{data_flow}.
+between program procedures in respect to control flow. \cite{data_flow}
 Lets have a call graph $G = \{V, E\}$.
 Then, set of vertices $V$ typically represents functions and set of edges $E$
 represents transfer of control flow from one function to another.
@@ -787,13 +784,13 @@ and compute call graph (\autoref{fig:call_graph}).
     \label{fig:call_graph}
 \end{figure}
 
-\textbf{TODO: pseudocode}
+\textbf{TODO: pseudocode}\\
 The way we compute call graph is simply running \emph{Breadth-first search}
 to visit all vertices.
 Upon visiting call instruction\footnote{\url{https://llvm.org/doxygen/classllvm_1_1CallInst.html}},
 we remember what function is being called and the source of the call.
 
-Having call graph represented in the structure as shown in the
+Having call graph represented in the structure shown in the
 \autoref{fig:call_graph}
 is beneficial for finding
 program execution flow path between specific instructions within the program in
@@ -803,43 +800,129 @@ relation to their dependencies.
 \section{Finding Path from Source to Target}
 \label{sec:design-path}
 
-% References: Find some solid def of path, not from wiki, it is lame.
-% TODO: some path code/picture example?
+% motivation
+Now that we have computed the call graph based on the connected components, it
+is possible to find a \textbf{path} from \emph{source} to \emph{target}.
 
-from wiki, citation needed dude "In graph theory, a path in a graph is a finite
-or infinite sequence of edges which connect a sequence of vertices which, by
-most definitions, are all distinct from one another."
+% definitions
+\emph{''A path is a simple graph whose vertices can be arranged in a linear sequence in
+such a way that two vertices are adjacent if they are consecutive in the sequence,
+and are nonadjacent otherwise.''}\cite{graph_theory} In our case, linear
+sequence of vertices consists of connected components.
 
-In our case, sequence of vertices is sequence of connected components and
-sequence of edges which connect these connected components are function calls
-(from one component to another component within called function).
-
+% method
 The reason why we constructed our special call graph from the connected
-components is the following: We want to find path from the source to target and
+components is now apparent. We want to find a path from source to the target and
 in doing so, know which connected components are part of this path or not.
 
-Source in our case is entry point to the program, main functions. Target is
-supplied by the user and consists of the pair filename, line number. This pair
-represents specific instruction (or set of instructions when compiled into IR).
-
-This means that we are finding execution path from main function to the target
-fine of code. Potentially, there may exist infinite number of such paths. From
+This means that we are finding execution path from main function (source) to the
+target.
+Potentially, there may exist infinite number of such paths. From
 the optimization standpoint, it would be fitting to find all (or at least as
 many as we can) paths from source to target and pick some path according to
 selected optimization criteria (shortest path, path with smallest connected
 components, etc.).
 
 However, for our purposes, it will be sufficient to find any path. We will use
-breadth first search to find any path and work with this path in the later
-stages (see chapter "removing unneeded stuff").
+\emph{Breadth-first search} to find such path and work with this path in the
+following stage.
 
+As we have presented in the beginng of the \autoref{chap:design}, user specified
+as the target line 7 in the \mintinline{text}{example.c} source code, which
+corresponds to the following IR instruction:
+
+\begin{minted}[label={target IR instruction},frame=lines,framesep=10pt]{llvm}
+  store i32 42, i32* %y, align 4
+\end{minted}
+
+Since we have source, target and also call graph, we can run
+\emph{Breadth-first search} and obtain path from source to target in the call
+graph as shown in the \autoref{fig:path}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_path.pdf}
+    \caption{Path from \textbf{source} to \textbf{target} computed on the
+    \autoref{fig:call_graph}. Components in the path are \emph{blue}.
+    }
+    \label{fig:path}
+\end{figure}
+
+Given source and target, we can see from the \autoref{fig:path} that path only
+contains two components, one from \mintinline{text}{main} function and another
+from \mintinline{text}{bar}. These two components will be the core of the final,
+extracted program.
 
 % === SECTION ===
-\section{Removing Dead Instructions and Functions}
+\section{Eliminating Dead Components and Functions}
 \label{sec:design-removing}
 
-% TODO: some stuff in here should be in implementation rationale behind removing stuff & why we need it
+% motivation
+Having successfully found path, we can proceed to the final phase.
+We need to eliminate all components and functions that do not impact the path.
 
+% method
+If we take a look at the \autoref{fig:removing_prepare}, we can see that
+components marked as \emph{red} do not impact the path at all and therefore, we
+can mark them for elimination.
+
+The \emph{yellow} component with the single instruction stands out.
+We will not remove this component because it contains
+terminator instruction \mintinline{llvm}{ret i32 0}.\footnote{
+\url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
+More about terminators and why they need special treatment in the
+\autoref{chap:implementation}.
+}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_removing_prepare.pdf}
+    \caption{
+    Components marked for removal are marked \emph{red}. \emph{Yellow} component
+    is not marked for removal, because it contains terminator.
+    }
+    \label{fig:removing_prepare}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_removing_done.pdf}
+    \caption{Final state after removing dead components and functions.
+    }
+    \label{fig:removing_done}
+\end{figure}
+
+When we are done going over every component and collecting selected ones for
+elimination, we can proceed to actually eliminate them (remove them from the
+\mintinline{text}{example.s}).
+
+After we are done with components, we can move to the functions. It may happen
+that there will be function not impacting path. For example, taking function
+\mintinline{llvm}{i32 @foo(i32 %n)} from the \autoref{fig:removing_prepare},
+It is clearly not impacting path. It even has its one and only component marked
+for elimination. In this case, we can proceed and remove function
+\mintinline{llvm}{i32 @foo(i32 %n)} altogether.
+
+Finally, finished with elimination process, we are left with the result in the
+form of the \autoref{fig:removing_done}.
+
+
+% === CHAPTER: Implementation ==================================================
+\chapter{Implementation: TODO}
+\label{chap:implementation}
+
+Random
+\begin{myEnumerate}
+\item how do we extract remaining program
+\item adding to the path
+\item removing non-path functions at the end
+\item along with dependencies
+\item before and after code samples
+\item before and after call graphs
+\end{myEnumerate}
+
+% section
+\section{Eliminating dead components and functions}
 The simplest and seemingly correct way would be to remove every connected
 component that is not part of the path that we calculated in the earlier
 chapter.
@@ -848,65 +931,45 @@ This approach would unfortunately produce inconsistent IR. It not enough to
 remove only components in the path. We need to include every other component
 that is dependent on any other component that is already part of the path.
 
-% subsection
+
+
 Checking if we have any branching dependent on the @path
 
-- investigating block, collecting basic blocks
- - TBA
-- block has no instruction in "if.*" basic block
+\begin{myEnumerate}
+\item investigating block, collecting basic blocks
+\item block has no instruction in "if.*" basic block
+\item block has some instruction in "if.*" basic block
+\item Find branch instruction that services this BB and add block associated with this branch instruction to the @path.
+\end{myEnumerate}
 
-Then do nothing
-
-- block has some instruction in "if.*" basic block
- - TBA
-
-- Find branch instruction that services this BB and add block associated with this branch instruction to the @path.
- - TBA
-
-% subsection
 Computing what dependency blocks we want to keep
-
-- marking every block from @path as to keep
-Mark as visited to make sure we do not process this block in BFS.
-
-- setting up initial queue for BFS search
-Go over @path and figure out if there are any calls outside the @path. If there
+\begin{myEnumerate}
+\item marking every block from @path as to keep
+\item Mark as visited to make sure we do not process this block in BFS.
+\item setting up initial queue for BFS search
+\item Go over @path and figure out if there are any calls outside the @path. If there
 are, put those called blocks for investigation into the @queue.
+\item running BFS
+\item Run BFS from queue and add everything for keeping that is not visited.
+\item Collecting everything that we do not want to keep
+\item We store blocks and functions that we want to remove into sets.
+\end{myEnumerate}
 
-- running BFS
-Run BFS from queue and add everything for keeping that is not visited.
-
-- Collecting everything that we do not want to keep
-We store blocks and functions that we want to remove into sets.
-
-% subsection
 Removing unwanted blocks
-
-Remove instructions that we stored earier. Watch out for terminators (do not
+\begin{myEnumerate}
+\item Remove instructions that we stored earier. Watch out for terminators (do not
 remove them).
-
-Do not erase instruction that is inside target instructions (We need those
+\item Do not erase instruction that is inside target instructions (We need those
 instructions intact.)
-
-% === CHAPTER: Implementation ==================================================
-\chapter{Implementation}
-\label{chap:implementation}
-
-\cite{llvm-writing-pass}
-how do we extract remaining program
-adding to the path
-removing non-path functions at the end
-along with dependencies
-before and after code samples
-before and after call graphs
+\end{myEnumerate}
 
 % === CHAPTER: Experiments =====================================================
-\chapter{Experiments}
+\chapter{Experiments: TODO}
 \label{chap:experiments}
 
 
 % === CHAPTER: Conclusions =====================================================
-\chapter{Conclusions}
+\chapter{Conclusions: TODO}
 \label{chap:conclusions}
 
 % === SECTION ===
