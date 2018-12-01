@@ -751,11 +751,11 @@ each pair of vertices is connected by some path.
 
 We use \textbf{data dependency graph} computed in the section
 \autoref{sec:design-dep} to find its connected components by using the following
-algorithm.
+algorithm:
 
 \begin{minted}[label=finding components,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let G = data dependency graph
-1. Run |\emph{Breadth-first search} \cite{clrs}| on G to visit each instruction
+1. Run |Breadth-first search \cite{clrs}| on G to visit each instruction
 2. IF instruction not in any component:
       create new component and put instruction inside
    ELSE:
@@ -819,7 +819,7 @@ components to the function (or functions).
 
 We construct the call graph using the following algorithm:
 
-\begin{minted}[label=constructing call graph,escapeinside=||,frame=lines,framesep=10pt]{text}
+\begin{minted}[label=computing call graph,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let FS = set of functions in the code
 1. Let CS(f) = set of components inside function f
 2. FOR EACH function F in the set FS:
@@ -847,55 +847,46 @@ We can see from the computed call graph, that
     \label{fig:call_graph}
 \end{figure}
 
-Having call graph represented in the structure shown in the
-\autoref{fig:call_graph}
-is beneficial for finding
-program execution flow path between specific components within the program in
-relation to their dependencies. We can find path from source to target and know
-which components this path contains.
 
-% === SECTION ===
+% === SECTION ==================================================================
 \section{Finding Path from Source to Target}
 \label{sec:design-path}
 
 % motivation
-Now that we have computed the call graph based on the connected components, it
-is possible to find a \textbf{path} from \emph{source} to \emph{target}.
+
+Having call graph represented in the structure shown in the
+\autoref{fig:call_graph} is beneficial for finding program execution flow path
+between specific components within the program in relation to their
+dependencies. We can find path from source to target and know which components
+this path contains.
 
 % definitions
-\emph{''A path is a simple graph whose vertices can be arranged in a linear sequence in
+
+\emph{''A \textbf{path} is a simple graph whose vertices can be arranged in a linear sequence in
 such a way that two vertices are adjacent if they are consecutive in the sequence,
 and are nonadjacent otherwise.''}\cite{graph_theory} In our case, linear
-sequence of vertices consists of connected components.
+sequence of vertices consists of components computed in the
+\autoref{sec:design-components}.
 
 % method
-The reason why we constructed our special call graph from the connected
-components is now apparent. We want to find a path from source to the target and
-in doing so, know which connected components are part of this path or not.
 
-This means that we are finding execution path from main function (source) to the
-target.
+The reason why we constructed call graph in the previous chapter is now apparent.
+We want to find a path from source to the target and in doing so, know which
+connected components are part of this path or not.
 Potentially, there may exist infinite number of such paths. From
 the optimization standpoint, it would be fitting to find all (or at least as
-many as we can) paths from source to target and pick some path according to
-selected optimization criteria (shortest path, path with smallest connected
-components, etc.).
+many as we can) paths and pick some path according to selected optimization
+criteria (shortest path, path with smallest connected components, etc.).
+However, for our purposes, it will be sufficient to find any path, because
+our method does not try to optimize final code in respect to size, speed, etc.
 
-However, for our purposes, it will be sufficient to find any path. We will use
-\emph{Breadth-first search} to find such path and work with this path in the
-following stage.
+We will use the following algorithm in order to find a path from source to target
+in the call graph:
 
-As we have presented in the beginng of the \autoref{chap:design}, user specified
-as the target line 7 in the \mintinline{text}{example.c} source code, which
-corresponds to the following IR instruction:
-
-\begin{minted}[label={target IR instruction},frame=lines,framesep=10pt]{llvm}
-  store i32 42, i32* %y, align 4
+\begin{minted}[label=finding path,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let G = call graph
+1. Run Breadth-first search on G to find path from source to target
 \end{minted}
-
-Since we have source, target and also call graph, we can run
-\emph{Breadth-first search} and obtain path from source to target in the call
-graph as shown in the \autoref{fig:path}.
 
 \begin{figure}[ht]
     \centering
@@ -906,14 +897,16 @@ graph as shown in the \autoref{fig:path}.
     \label{fig:path}
 \end{figure}
 
-Given source and target, we can see from the \autoref{fig:path} that path only
-contains two components, one from \mintinline{text}{main} function and another
-from \mintinline{text}{bar}. These two components will be the core of the final,
-extracted program.
+Given the source and target, we can see from the \autoref{fig:path} that path
+only contains two components, one from \mintinline{text}{main} function and
+another from \mintinline{text}{bar}. These two components are going to be the
+core of the final, extracted program.
 
-% === SECTION ===
+% === SECTION ==================================================================
 \section{Eliminating Dead Components and Functions}
 \label{sec:design-removing}
+
+\textbf{TODO}
 
 % motivation
 Having successfully found path, we can proceed to the final phase.
@@ -1029,22 +1022,12 @@ executable.
 
 \subsection{Find connected components in the apexdg.}
 
-\subsection Construct call graph, mapping between connected components and functions
-that are being called from these components.
+\subsection{Construct call graph, mapping between connected components and functions
+that are being called from these components.}
 
 \subsection{Find path from source to target in the call graph.}
 
 \subsection{Eliminate dead components and functions that do not depend on the path.}
-\begin{myEnumerate}
-\item Handling of terminators
-\end{myEnumerate}
-
-
-\subsection{Injecting extraction and exit}
-
-\subsection{Recompilation, stripping debug symbols}
-
-% section
 The simplest and seemingly correct way would be to remove every connected
 component that is not part of the path that we calculated in the earlier
 chapter.
@@ -1081,6 +1064,10 @@ remove them).
 \item Do not erase instruction that is inside target instructions (We need those
 instructions intact.)
 \end{myEnumerate}
+
+\subsection{Injecting extraction and exit}
+
+\subsection{Recompilation, stripping debug symbols}
 
 %section
 \section{Recompilation back to the executable}
