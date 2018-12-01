@@ -404,24 +404,94 @@ this project
 \chapter{Extracting Program Subsets: WIP}
 \label{chap:design}
 
-% introduction
+\textbf{TODO: weire intro about this chapter structure.}
+\\
+In this chapter, we introduce the method for extracting parts of programs
+from the provided user input.
 
-In this chapter, we will introduce the method for extracting parts of programs
-from the provided user input. The presented method will not randomly extract
-program parts, that would not be useful. Instead, the method determines what
-parts of the input program to extract according to the user input. Besides C
-source code, user also provides integer value that represents line of code
-corresponding to the input C source code. We will call this integer value
-\textbf{target}.  Our procedure will subsequently calculate possible execution
-path up to the target that user provided and extracts this execution path into
-the separate, functioning executable.
+We start with the method overview in the \autoref{sec:method_overview} where we
+define what is the user input and briefly outline the method itself, what it
+does and what are the steps for achieving the final result.
 
-The whole procedure from the user perspective (including the desired result we
-want to achieve) may look like this:
+We follow with the example of the method from the user perspective in the
+\autoref{sec:method_example}.
 
-% next point
+After example, we present in detail each major step that is followed.
+Starting with computing data dependencies graph
+(\autoref{sec:design-dep}).
+Following with the procedure for finding connected components in the computed
+data dependencies graph (\autoref{sec:design-components}).
+Next follows introduction of the call graph (\autoref{sec:design-callgraph}) and
+subsequently procedure for finding path from source to target in it
+(\autoref{sec:design-path}).
+The chapter ends with the section describing methods on eliminating dead
+components and functions from the code (\autoref{sec:design-removing}).
+
+
+% ===== SECTION: Method Overview
+\section{Method Overview}
+\label{sec:method_overview}
+
+% method input definition
+Mandatory \textbf{input} for the method is a touple with the following
+definition:
+
+$$
+input \equiv (code, target)
+$$
+
+where:
 \begin{myItemize}
-\item Lets say the user provided us with the input in the form of the following
+\item \textbf{code} is a C program source code compiled into the llvm bytecode.
+\item \textbf{target} is an integer value representing line of code from the
+C program source code.
+\end{myItemize}
+
+We also define \textbf{source} as an entry to the C program
+(\mintinline{text}{main} function).
+
+\bigskip
+% what the method does
+
+The method determines what parts of the \emph{input} to extract according to
+the \emph{source} and \emph{target}.
+Procedure subsequently calculates possible execution path up to the
+\emph{target} and extracts this execution path into the separate, functioning
+executable.
+
+Barring implementation specific details (which are discussed in the
+\autoref{chap:implementation}), the method can be summarized by the following
+five steps:
+
+\begin{myEnumerate}
+\item Compute data dependencies between instructions.
+\item Find connected components in the computed data dependencies inside
+every function.
+\item Construct call graph, mapping between connected components and functions
+that are being called from these components.
+\item Find path from source to target in the call graph.
+\item Eliminate dead components and functions that do not depend on the path.
+\end{myEnumerate}
+
+\bigskip
+% what is the result of the method
+Upon completion of the steps mentioned above, the llvm bytecode is produced as
+an \emph{output}.
+We can define \textbf{output} as the extracted part of the original program
+according to the \emph{source} and \emph{target} while keeping the consistency
+of the code intact.
+By \textbf{consistency}, we mean that the \emph{output} code is in a such state
+that it was possible to be compiled.
+\emph{Output} is expected to be runnable the same way as
+the original.
+\textbf{**TODO? explain more here or in another chapter what it means for IR to be
+compiled without problems?**}
+
+% === SECTION: Method Example
+\section{Example}
+\label{sec:method_example}
+
+User provided us with the \emph{input} in the form of the following
 C program source code that is stored in the file \mintinline{text}{example.c}:
 
 \begin{minted}[label=example.c,frame=lines,framesep=10pt,linenos]{C}
@@ -445,7 +515,7 @@ int main(void) {
 
 Since our method does not work directly with the C source code but instead
 works with the LLVM Intermediate Representation (IR), lets use clang and emit
-IR from the presented C source code in order to demonstrate our method more
+IR from the presented C source code in order to demonstrate the procedure more
 clearly:
 \footnote {
 Flag \mintinline{text}{-S} tells clang to only run preprocess and
@@ -459,15 +529,15 @@ various clang flags, visit
   clang -S -emit-llvm example.c -o example.s
 \end{minted}
 
-Emitted LLVM IR is stored in the file \mintinline{text}{example.s} and would
-have the following structure:\footnote{
+Emitted LLVM IR is stored in the file \mintinline{text}{example.s} and
+has the following structure:\footnote{
 Strictly speaking, this is not exactly the IR code that would be emitted by the
 clang. We have stripped it out of the module info and comments to make it more
 readable. To see the unmodified \mintinline{text}{example.s}, please go to the
 \autoref{appendix:example}.
 }
 
-\begin{minted}[label=example.s,frame=lines,framesep=10pt]{llvm}
+\begin{minted}[label=example.s,frame=lines,framesep=10pt,linenos]{llvm}
 define i32 @foo(i32 %n) #0 {
 entry:
   %n.addr = alloca i32, align 4
@@ -504,34 +574,23 @@ entry:
   ret i32 0
 }
 \end{minted}
-\end{myItemize}
 
 % next point
-\begin{myItemize}
-\item User also provided the line number 7 from the \mintinline{text}{example.c}
-as the target, which corresponds to the following C code:
-\smallskip
-
-\begin{minted}[label={target C line},frame=lines,framesep=10pt]{C}
-  int y = 42;
-\end{minted}
-
-Target C line of code corresponds in turn to the following IR instruction:
-
-\begin{minted}[label={target IR instruction},frame=lines,framesep=10pt]{llvm}
-  store i32 42, i32* %y, align 4
-\end{minted}
+User also provided the line number \textbf{7} from the
+\mintinline{text}{example.c} as the target, which corresponds to the line
+\textbf{16} from the \mintinline{text}{example.s}. Source is the main function.
 
 Procedure for finding mapping between C code referenced by the user input and
-its analogous IR instruction is implementation detail and will be described
+its analogous IR instruction is implementation detail and is be described
 in the \autoref{chap:implementation}.
-\end{myItemize}
+
+\bigskip
 
 % next point
-\begin{myItemize}
-\item Now, we can take our method, apply it on the contents of the
-\mintinline{text}{example.s} and get the following result stored in the file
-\mintinline{text}{example_extracted.s}:
+When we apply the method on the contents of the
+\mintinline{text}{example.s} with respect to the source and target,
+we get the result stored in the file
+\mintinline{text}{example_extracted.s} with the following code:
 
 \begin{minted}[label=example\_extracted.s,frame=lines,framesep=10pt]{llvm}
 define i32 @bar() #0 {
@@ -563,26 +622,7 @@ We can now take \mintinline{text}{example_extracted.s} and recompile it back
 into the functioning executable.\footnote{
 More about recompilation in the \autoref{chap:implementation}.
 }
-\end{myItemize}
 
-\bigskip
-% next stuff
-Barring implementation specific details (which will be discussed in the
-\autoref{chap:implementation}), the method for achieving presented result can be
-summarized in the following five steps:
-
-\begin{myEnumerate}
-\item Compute data dependencies between instructions.
-\item Find connected components in the computed data dependencies inside
-every function.
-\item Construct call graph, mapping between connected components and functions
-that are being called from these components.
-\item Find path from source to target in the call graph.
-\item Eliminate dead components and functions that do not depend on the path.
-\end{myEnumerate}
-
-We will describe in detail each step in the remaining sections of the current
-chapter.
 
 % === SECTION ===
 \section{Computing Data Dependencies}
@@ -590,21 +630,20 @@ chapter.
 
 % motivation
 In order to identify what parts of the IR we can afford to remove, it is
-imperative to compute dependencies between instructions. We cannot haphazardly
-start removing functions left and right because we may remove some instruction
-that would be later needed by another instruction.
-This unwise action, may in effect produce inconsistent state, which might leave
-IR in the unwanted state or even state that would later fail to recompile back
-into the functional executable.
+imperative to compute dependencies between instructions.
+When removing instructions, we need to preserve consistency of the remaining
+code so that it can be later compiled into a functional executable.
+To ensure this, we first compute dependencies among instructions.
+
+\bigskip
 
 % definitions
 We recognize two types of dependencies between IR instructions: control and data
 dependencies.
-The following terminology and algorithms for computing dependencies that we use
+The following terminology and procedures for computing dependencies that we use
 are due to the Marek Chalupa master's thesis \textit{Slicing of LLVM Bitcode}
 \cite{dg}.
 
-% TODO: reword this defs?
 \begin{myItemize}
 \item ``\textbf{Control dependence} explicitly states what nodes are
 controlled by which predicate.``
@@ -614,12 +653,14 @@ of that variable on some path between n and m. In other words, the definitions
 from n reach uses in m.``
 \end{myItemize}
 
+\bigskip
+
 % method
 The crucial information comes from data dependencies. We need to make sure that
 the IR integrity will remain intact after we are done with removing IR
 instructions.
 
-Let us demonstrate how would data dependencies look on the example from the
+The following example demonstrates data dependencies for the
 previously presented \mintinline{text}{example.c} source code.
 Taking closer look specifically at the function \mintinline{text}{main}:
 
@@ -641,19 +682,22 @@ entry:
 }
 \end{minted}
 
-Looking at the \mintinline{text}{main}, we can construct graph G where V is set
+Taking \mintinline{text}{main} code, we can construct graph G where V is set
 of vertices (in our case vertex is instruction) and E is set of edges (in our
 case, edge between vertices V1 and V2 represents data dependency between
 instruction V1 and V2).
+In order to compute data dependencies, we use \mintinline{text}{dg} library.
+\cite{dg}
 \footnote{
-We compute data dependencies using tool \mintinline{text}{dg}
 For more info please visit \url{https://github.com/mchalupa/dg} \cite{dg}.
 We will take a closer look at \mintinline{text}{dg} in the
 \autoref{chap:implementation}.
 }
 
-Computed data dependency graph for instructions from the function
+Computed \textbf{data dependency graph} for instructions from the function
 \mintinline{text}{main} is presented in the \autoref{fig:data_deps_graph}.
+This graph is stored and used in the next step of the method for finding
+connected components (\autoref{sec:design-components}).
 
 \begin{figure}[ht]
     \centering
@@ -662,9 +706,9 @@ Computed data dependency graph for instructions from the function
     \label{fig:data_deps_graph}
 \end{figure}
 
-Lets take a closer look at the instruction:
+Taking a closer look at the instruction:
 \mintinline{llvm}{%some_int = alloca i32, align 4}.
-We can see that the following instructions have data dependency on the
+We see that the following instructions have data dependency on the
 \mintinline{llvm}{%some_int}
 
 \begin{minted}[frame=lines,framesep=10pt, escapeinside=||]{llvm}
@@ -673,42 +717,56 @@ We can see that the following instructions have data dependency on the
 \end{minted}
 
 It is apparent that both instructions need \mintinline{llvm}{%some_int} for
-their operand. If we were going to remove
+their operand. If we removed
 \mintinline{llvm}{%some_int = alloca i32, align 4}
 without taking into consideration that there are two
 instructions that depend on it, we would get into inconsistent state and two
-dependent instructions would contain undefined values as their operand.
-
-This would clearly lead into unsuccessful recompilation back into the executable.
-In the next chapter, we will discuss how to identify and deal with these kinds
-of situations.
+dependent instructions would contain undefined values as their operand.\footnote{
+More about undefined values at
+\url{https://llvm.org/docs/LangRef.html\#undefined-values},
+\url{https://llvm.org/docs/FAQ.html\#what-is-this-undef-thing-that-shows-up-in-my-code},
+\url{https://llvm.org/doxygen/classllvm_1_1UndefValue.html}
+}
+This would lead into unsuccessful recompilation of the modified code back into
+the executable.
 
 % === SECTION ===
 \section{Finding Connected Components}
 \label{sec:design-components}
 
-% References% TODO: put definition of connected component somewhere
-
 % motivation
-We have shown what are inter-instruction data dependencies and how they are
-important, but they do not fully solve our problem. If we want to remove
-some instruction, it is not enough to know what are the immediate neighbors
-in the data dependency graph.
+Having shown in the previous section what are inter-instruction data
+dependencies and how important they are in relation to the code consistency.
+However, they do not fully solve our problem of knowing when it is safe to
+remove instruction.
+Data dependencies between only two instructions do not reveal the whole picture.
+Since we have computed and stored graph of data dependencies, let us propose the
+idea of computing connected components of this graph.
 
-%definitions & method
-We can observe, that instruction dependencies tend to cluster and form
-components.
-Lets take the previously computed dependency graph G and find its connected
-components. We will run \emph{Breadth-first search} \cite{clrs} to go
-and visit each instruction. If the instruction is not in any component lets
-create one and put this instruction inside. If visited instruction is already
-in existing component, just skip it and go to the next instruction.
-\textbf{TODO: pseudocode}
-% TODO: this would be nicely formatted as a pseudocode
-% TODO: https://github.com/examon/APEX/blob/197e7a6ec89b7127591df11df0972ff7640d9f00/apex/apex.cpp#L521
+\bigskip
 
-After running the above mentioned algorithm, we get the following graph, where
-connected components are denoted with different color:
+% definitions
+We define \textbf{connected component} as an isolated subgraph, where
+each pair of vertices is connected by some path.
+
+We use \textbf{data dependency graph} computed in the section
+\autoref{sec:design-dep} to find its connected components by using the following
+algorithm.
+
+\begin{minted}[label=finding components,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let G = data dependency graph
+1. Run |\emph{Breadth-first search} \cite{clrs}| on G to visit each instruction
+2. IF instruction not in any component:
+      create new component and put instruction inside
+   ELSE:
+      go to next instruction
+\end{minted}
+
+Running the above mentioned algorithm on the \textbf{data dependency graph}
+produces connected components for each function in the input.
+As an example, we present components for the \mintinline{text}{main} function
+in the \autoref{fig:connected_components_graph} (for the clarity, each component
+has its own color).
 
 \begin{figure}[ht]
     \centering
@@ -719,62 +777,67 @@ connected components are denoted with different color:
     \label{fig:connected_components_graph}
 \end{figure}
 
+\bigskip
+
+% why having components is good
 Having instructions within each function separated into connected components
-comes useful especially when we want to figure out if we can safely remove
-specific instruction.
-
-Lets take \mintinline{llvm}{%call = call i32 @foo(i32 %0)} as an example.
-Having computed connected components, we can see that this instruction
-belongs to the \emph{yellow} connected component.
-
-Now, if we were not interested in this particular instruction and wanted to
-remove it, we now know that we need to take care a closer look at the whole
-component and not only on one particular instruction.
-
-It would not be sufficient to only remove
-\mintinline{llvm}{%call = call i32 @foo(i32 %0)} because there are other
-instructions within the same component, which means that other members of the
-\emph{yellow} component are in dependency relationship with each other.
-
-The good thing is that if we were to remove some unwanted instruction,
-for instance \mintinline{llvm}{%retval = alloca i32, align 4} from the \emph{blue} component
-we now have the information and know that we should remove also
-\mintinline{llvm}{store i32 0, i32* %retval, align 4}. This way, we will not
-leave any instructions stranded and with missing dependencies.
-As we mentioned earlier, this will ensure that the IR is in the consistent state
-and we will be able to recompile the modified IR back into the functioning
-executable.
+comes useful especially because we can answer the question if some particular
+instruction is in data dependency relationship with multiple other instructions
+(instructions that form a data dependency path, etc.).
 
 % === SECTION ===
 \section{Computing Call Graph}
 \label{sec:design-callgraph}
 
 %motivation
-In respect to the program execution flow, user provided us the target and
-we know the source, which is entry to the program
-(\mintinline{text}{main} function).
-In order to proceed further, we need to know what possible routes can execution
-of the program follow. Computing and walking the call graph of the program
-can produce for us this piece of information.
 
-%definition
-% TODO: citation needed & improve this, add definition of CFG
-\textbf{Call graph}\footnote{
+In respect to the program execution flow, user provided the target and we know
+the source.
+In order to proceed further, it is needed to compute possible paths from
+source to target that could be used by the execution of the program.
+Computing and walking the call graph of the program can produce for us this
+piece of information.
+
+% definition
+
+A \textbf{call graph}\footnote{
 More technically, \emph{call multigraph} \cite{data_flow}.}
 is a control flow graph that represents relationship
-between program procedures in respect to control flow. \cite{data_flow}
-Lets have a call graph $G = \{V, E\}$.
-Then, set of vertices $V$ typically represents functions and set of edges $E$
-represents transfer of control flow from one function to another.
+between program procedures in respect to control flow.\cite{data_flow}
+Having call graph $G = \{V, E\}$, set of vertices $V$ typically represents
+functions and set of edges $E$ represents transfer of control flow from one
+function to another.
 
 In our context, call graph represents relationship between individual
 connected components (computed in the \autoref{sec:design-components})
 and functions that are being called from these components by one of its
-instructions.
+instructions. In other words, our call graph is a set of mappings from
+components to the function (or functions).
 
-To demonstrate clearly what exactly is call graph in our situation, lets take
-the computed components as shown in the \autoref{fig:connected_components_graph}
-and compute call graph (\autoref{fig:call_graph}).
+
+% example
+
+We construct the call graph using the following algorithm:
+
+\begin{minted}[label=constructing call graph,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let FS = set of functions in the code
+1. Let CS(f) = set of components inside function f
+2. FOR EACH function F in the set FS:
+      FOR EACH component C in the set CS(F):
+         FOR EACH instruction I in the component C:
+            IF instruction I is a call instruction to some function X:
+                store information X gets called from the C
+\end{minted}
+
+Running the presented algorithm on the \textbf{data dependence graph}
+of the \mintinline{text}{main} function that we computed earlier
+(\autoref{fig:connected_components_graph}) produce call graph structure
+shown in the \autoref{fig:call_graph}. We know that in the context of the
+\mintinline{text}{main} function, there are four distinct components.
+We can see from the computed call graph, that
+\mintinline{llvm}{i32 @foo(i32 %n)} is being called from the
+\emph{yellow} component, and
+\mintinline{llvm}{i32 @bar()} is being called from the \emph{red} component.
 
 \begin{figure}[ht]
     \centering
@@ -784,17 +847,12 @@ and compute call graph (\autoref{fig:call_graph}).
     \label{fig:call_graph}
 \end{figure}
 
-\textbf{TODO: pseudocode}\\
-The way we compute call graph is simply running \emph{Breadth-first search}
-to visit all vertices.
-Upon visiting call instruction\footnote{\url{https://llvm.org/doxygen/classllvm_1_1CallInst.html}},
-we remember what function is being called and the source of the call.
-
 Having call graph represented in the structure shown in the
 \autoref{fig:call_graph}
 is beneficial for finding
-program execution flow path between specific instructions within the program in
-relation to their dependencies.
+program execution flow path between specific components within the program in
+relation to their dependencies. We can find path from source to target and know
+which components this path contains.
 
 % === SECTION ===
 \section{Finding Path from Source to Target}
@@ -906,23 +964,87 @@ for elimination. In this case, we can proceed and remove function
 Finally, finished with elimination process, we are left with the result in the
 form of the \autoref{fig:removing_done}.
 
+\textbf{TODO: this below should be move to the \autoref{sec:design-removing}}
 
+Lets take \mintinline{llvm}{%call = call i32 @foo(i32 %0)} as an example.
+Having computed connected components, we can see that this instruction
+belongs to the \emph{yellow} connected component.
+
+Now, if we were not interested in this particular instruction and wanted to
+remove it, we now know that we need to take care a closer look at the whole
+component and not only on one particular instruction.
+
+\textbf{TODO: Explicitly define when we are removing functions and what exactly are we doing}
+
+It would not be sufficient to only remove
+\mintinline{llvm}{%call = call i32 @foo(i32 %0)} because there are other
+instructions within the same component, which means that other members of the
+\emph{yellow} component are in dependency relationship with each other.
+
+The good thing is that if we were to remove some unwanted instruction,
+for instance \mintinline{llvm}{%retval = alloca i32, align 4} from the \emph{blue} component
+we now have the information and know that we should remove also
+\mintinline{llvm}{store i32 0, i32* %retval, align 4}. This way, we will not
+leave any instructions stranded and with missing dependencies.
+As we mentioned earlier, this will ensure that the IR is in the consistent state
+and we will be able to recompile the modified IR back into the functioning
+executable.
 % === CHAPTER: Implementation ==================================================
 \chapter{Implementation: TODO}
 \label{chap:implementation}
 
-Random
+%section
+\section{APEX}
+
+\subsection{what is APEX}
+
+\subsection{two components of apex}
 \begin{myEnumerate}
-\item how do we extract remaining program
-\item adding to the path
-\item removing non-path functions at the end
-\item along with dependencies
-\item before and after code samples
-\item before and after call graphs
+\item launcher
+\item APEXPass
 \end{myEnumerate}
 
 % section
-\section{Eliminating dead components and functions}
+\section{Launcher}
+
+\subsection{compiling input to bytecode with dbg symbols}
+
+\subsection{running basic opts}
+
+\subsection{linking input with apexlib}
+
+\subsection{running apexpass}
+
+\subsection{exporting call graph, dependency graph, disassembly bc}
+
+\subsection{running final binaries}
+
+% section
+\section{APEXPass}
+
+\subsection{User Inpur Parsing, Mapping C code to IR}
+
+\subsection{Compute data dependencies between instructions.}
+- running dg, init apexdg
+
+\subsection{Find connected components in the apexdg.}
+
+\subsection Construct call graph, mapping between connected components and functions
+that are being called from these components.
+
+\subsection{Find path from source to target in the call graph.}
+
+\subsection{Eliminate dead components and functions that do not depend on the path.}
+\begin{myEnumerate}
+\item Handling of terminators
+\end{myEnumerate}
+
+
+\subsection{Injecting extraction and exit}
+
+\subsection{Recompilation, stripping debug symbols}
+
+% section
 The simplest and seemingly correct way would be to remove every connected
 component that is not part of the path that we calculated in the earlier
 chapter.
@@ -931,10 +1053,7 @@ This approach would unfortunately produce inconsistent IR. It not enough to
 remove only components in the path. We need to include every other component
 that is dependent on any other component that is already part of the path.
 
-
-
 Checking if we have any branching dependent on the @path
-
 \begin{myEnumerate}
 \item investigating block, collecting basic blocks
 \item block has no instruction in "if.*" basic block
@@ -962,6 +1081,9 @@ remove them).
 \item Do not erase instruction that is inside target instructions (We need those
 instructions intact.)
 \end{myEnumerate}
+
+%section
+\section{Recompilation back to the executable}
 
 % === CHAPTER: Experiments =====================================================
 \chapter{Experiments: TODO}
@@ -1082,7 +1204,7 @@ programs.
 \chapter{\mintinline{text}{example.s}}
 \label{appendix:example}
 
-\begin{minted}[frame=lines, framesep=10pt, breaklines]{llvm}
+\begin{minted}[frame=lines, framesep=10pt, breaklines,linenos]{llvm}
 ; ModuleID = 'example.c'
 source_filename = "example.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
