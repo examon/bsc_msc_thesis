@@ -399,17 +399,15 @@ AST
 - We will not use clangs AST, we will work directly with IR, it better suits
 this project
 
-
+% ==============================================================================
 % === CHAPTER: Design of the Method ============================================
-\chapter{Extracting Program Subsets: WIP}
+\chapter{Extracting Program Subsets}
 \label{chap:design}
 
-\textbf{TODO: weire intro about this chapter structure.}
-\\
 In this chapter, we introduce the method for extracting parts of programs
 from the provided user input.
 
-We start with the method overview in the \autoref{sec:method_overview} where we
+Starting with the method overview in the \autoref{sec:method_overview} where we
 define what is the user input and briefly outline the method itself, what it
 does and what are the steps for achieving the final result.
 
@@ -428,7 +426,7 @@ The chapter ends with the section describing methods on eliminating dead
 components and functions from the code (\autoref{sec:design-removing}).
 
 
-% ===== SECTION: Method Overview
+% ===== SECTION: Method Overview ===============================================
 \section{Method Overview}
 \label{sec:method_overview}
 
@@ -450,7 +448,6 @@ C program source code.
 We also define \textbf{source} as an entry to the C program
 (\mintinline{text}{main} function).
 
-\bigskip
 % what the method does
 
 The method determines what parts of the \emph{input} to extract according to
@@ -473,7 +470,6 @@ that are being called from these components.
 \item Eliminate dead components and functions that do not depend on the path.
 \end{myEnumerate}
 
-\bigskip
 % what is the result of the method
 Upon completion of the steps mentioned above, the llvm bytecode is produced as
 an \emph{output}.
@@ -484,10 +480,10 @@ By \textbf{consistency}, we mean that the \emph{output} code is in a such state
 that it was possible to be compiled.
 \emph{Output} is expected to be runnable the same way as
 the original.
-\textbf{**TODO? explain more here or in another chapter what it means for IR to be
-compiled without problems?**}
+\textbf{**TODO? explain more here or in another chapter what it means for IR to
+be compiled without problems?**}
 
-% === SECTION: Method Example
+% === SECTION: Method Example ==================================================
 \section{Example}
 \label{sec:method_example}
 
@@ -624,7 +620,7 @@ More about recompilation in the \autoref{chap:implementation}.
 }
 
 
-% === SECTION ===
+% === SECTION: Computing Data Dependencies =====================================
 \section{Computing Data Dependencies}
 \label{sec:design-dep}
 
@@ -634,8 +630,6 @@ imperative to compute dependencies between instructions.
 When removing instructions, we need to preserve consistency of the remaining
 code so that it can be later compiled into a functional executable.
 To ensure this, we first compute dependencies among instructions.
-
-\bigskip
 
 % definitions
 We recognize two types of dependencies between IR instructions: control and data
@@ -652,8 +646,6 @@ m iff n defines a variable that m uses and there is no intervening definition
 of that variable on some path between n and m. In other words, the definitions
 from n reach uses in m.``
 \end{myItemize}
-
-\bigskip
 
 % method
 The crucial information comes from data dependencies. We need to make sure that
@@ -730,7 +722,7 @@ More about undefined values at
 This would lead into unsuccessful recompilation of the modified code back into
 the executable.
 
-% === SECTION ===
+% === SECTION: Finding Connected Components ====================================
 \section{Finding Connected Components}
 \label{sec:design-components}
 
@@ -743,9 +735,8 @@ Data dependencies between only two instructions do not reveal the whole picture.
 Since we have computed and stored graph of data dependencies, let us propose the
 idea of computing connected components of this graph.
 
-\bigskip
-
 % definitions
+
 We define \textbf{connected component} as an isolated subgraph, where
 each pair of vertices is connected by some path.
 
@@ -777,15 +768,14 @@ has its own color).
     \label{fig:connected_components_graph}
 \end{figure}
 
-\bigskip
-
 % why having components is good
+
 Having instructions within each function separated into connected components
 comes useful especially because we can answer the question if some particular
 instruction is in data dependency relationship with multiple other instructions
 (instructions that form a data dependency path, etc.).
 
-% === SECTION ===
+% === SECTION: Computing Call Grap =============================================
 \section{Computing Call Graph}
 \label{sec:design-callgraph}
 
@@ -848,7 +838,7 @@ We can see from the computed call graph, that
 \end{figure}
 
 
-% === SECTION ==================================================================
+% === SECTION: Finding Path ====================================================
 \section{Finding Path from Source to Target}
 \label{sec:design-path}
 
@@ -902,35 +892,68 @@ only contains two components, one from \mintinline{text}{main} function and
 another from \mintinline{text}{bar}. These two components are going to be the
 core of the final, extracted program.
 
-% === SECTION ==================================================================
+% === SECTION: Eliminating Dead Code ===========================================
 \section{Eliminating Dead Components and Functions}
 \label{sec:design-removing}
 
-\textbf{TODO}
-
 % motivation
-Having successfully found path, we can proceed to the final phase.
-We need to eliminate all components and functions that do not impact the path.
 
-% method
-If we take a look at the \autoref{fig:removing_prepare}, we can see that
-components marked as \emph{red} do not impact the path at all and therefore, we
-can mark them for elimination.
+This section is the last step that the method performs.
+Components and functions that are dead are indentified and removed from the code
+and therefore, they will not be part of the final, extracted executable.
 
+% definition
+Element of the code marked as \textbf{dead} is defined as such,
+that it can be safely deleted without compromising integrity of the code.
+In other words, we can safely remove dead elements from the code without being
+worried that the execution starting from the source will not reach target.
+
+Having successfully found path from source to target in the last section,
+we know that each component that is part of the path cannot be marked as dead.
+Therefore, components outside of path have to be explored and the decision
+found weather they can be marked as dead and removed or not.
+
+We can use the following basic algorithm for finding and eliminating dead
+components:
+
+\begin{minted}[label=eliminating dead components,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let CS = set of all components in the code
+1. Let PATH = set of components on the path from source to target
+2. FOR EACH component C IN set CS:
+      IF component C is not in the set PATH:
+         IF component C does not contain terminator:
+             mark component C as DEAD
+3. remove all components marked as DEAD
+\end{minted}
+
+
+% example
+After applying the presented algorithm for eliminating dead components on the
+code from \mintinline{text}{example.s} we get the result that is visualised
+in the \autoref{fig:removing_prepare}.
+We can see components marked as dead are colored \emph{red} because they are not
+part of the path.
 The \emph{yellow} component with the single instruction stands out.
-We will not remove this component because it contains
+This component is not marked as dead and will not be removed because it contains
 terminator instruction \mintinline{llvm}{ret i32 0}.\footnote{
 \url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
 More about terminators and why they need special treatment in the
 \autoref{chap:implementation}.
 }
+Finally, all components marked as dead are removed and we are left with the
+code that we presented in the \autoref{sec:method_example}
+(\mintinline{text}{example_extracted.s}).
+Contents of the \mintinline{text}{example_extracted.s} are visualized in the
+\autoref{fig:removing_done}.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/main_removing_prepare.pdf}
     \caption{
-    Components marked for removal are marked \emph{red}. \emph{Yellow} component
-    is not marked for removal, because it contains terminator.
+    \mintinline{text}{example.s}:
+    Components selected for removal are marked \emph{red}.
+    \emph{Yellow} component is not marked for removal, because it contains
+    terminator.
     }
     \label{fig:removing_prepare}
 \end{figure}
@@ -938,50 +961,280 @@ More about terminators and why they need special treatment in the
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/main_removing_done.pdf}
-    \caption{Final state after removing dead components and functions.
+    \caption{
+    \mintinline{text}{example_extracted.s}:
+    Final state after removing dead components and functions.
     }
     \label{fig:removing_done}
 \end{figure}
 
-When we are done going over every component and collecting selected ones for
-elimination, we can proceed to actually eliminate them (remove them from the
-\mintinline{text}{example.s}).
+% conclusion
 
-After we are done with components, we can move to the functions. It may happen
-that there will be function not impacting path. For example, taking function
-\mintinline{llvm}{i32 @foo(i32 %n)} from the \autoref{fig:removing_prepare},
-It is clearly not impacting path. It even has its one and only component marked
-for elimination. In this case, we can proceed and remove function
-\mintinline{llvm}{i32 @foo(i32 %n)} altogether.
+Unfortunately, the algorithm presented above works correctly only on the simple,
+non-complex inputs that are similar to the \mintinline{text}{example.s}.
+We will present two slightly more complicated programs to reveal the flaws of
+this algorithm.
+In order for method to work correctly, algorithm for eliminating dead components
+has to be extended to account for the introduced input complexities.
 
-Finally, finished with elimination process, we are left with the result in the
-form of the \autoref{fig:removing_done}.
 
-\textbf{TODO: this below should be move to the \autoref{sec:design-removing}}
+% === SUB-SECTION: External Function ===========================================
+\subsection{Path Depending on the External Function}
 
-Lets take \mintinline{llvm}{%call = call i32 @foo(i32 %0)} as an example.
-Having computed connected components, we can see that this instruction
-belongs to the \emph{yellow} connected component.
 
-Now, if we were not interested in this particular instruction and wanted to
-remove it, we now know that we need to take care a closer look at the whole
-component and not only on one particular instruction.
 
-\textbf{TODO: Explicitly define when we are removing functions and what exactly are we doing}
+% mod1 C code
+\begin{minted}[label=example\_mod1.c,frame=lines,framesep=10pt,linenos]{C}
+int foo(int n) {
+    int x = n + 10;
+    return x;
+}
 
-It would not be sufficient to only remove
-\mintinline{llvm}{%call = call i32 @foo(i32 %0)} because there are other
-instructions within the same component, which means that other members of the
-\emph{yellow} component are in dependency relationship with each other.
+int qux(void) {
+    return 42;
+}
 
-The good thing is that if we were to remove some unwanted instruction,
-for instance \mintinline{llvm}{%retval = alloca i32, align 4} from the \emph{blue} component
-we now have the information and know that we should remove also
-\mintinline{llvm}{store i32 0, i32* %retval, align 4}. This way, we will not
-leave any instructions stranded and with missing dependencies.
-As we mentioned earlier, this will ensure that the IR is in the consistent state
-and we will be able to recompile the modified IR back into the functioning
-executable.
+int bar(void) {
+    int y = qux();
+    return y;
+}
+
+int main(void) {
+    int some_int = 10;
+    int foo_result = foo(some_int);
+    int bar_result = bar();
+
+    return 0;
+}
+\end{minted}
+
+% mod1 IR
+\begin{minted}[label=example\_mod1.s,frame=lines,framesep=10pt,linenos]{llvm}
+define i32 @foo(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  %x = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32, i32* %n.addr, align 4
+  %add = add nsw i32 %0, 10
+  store i32 %add, i32* %x, align 4
+  %1 = load i32, i32* %x, align 4
+  ret i32 %1
+}
+
+define i32 @qux() #0 {
+entry:
+  ret i32 42
+}
+
+define i32 @bar() #0 {
+entry:
+  %y = alloca i32, align 4
+  %call = call i32 @qux()
+  store i32 %call, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
+}
+
+define i32 @main() #0 {
+entry:
+  %retval = alloca i32, align 4
+  %some_int = alloca i32, align 4
+  %foo_result = alloca i32, align 4
+  %bar_result = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  store i32 10, i32* %some_int, align 4
+  %0 = load i32, i32* %some_int, align 4
+  %call = call i32 @foo(i32 %0)
+  store i32 %call, i32* %foo_result, align 4
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
+  ret i32 0
+}
+\end{minted}
+
+
+% mod1 extracted
+\begin{minted}[label=example\_mod1\_extracted.s,frame=lines,framesep=10pt,linenos]{llvm}
+define i32 @qux() #0 {
+entry:
+  ret i32 42
+}
+
+define i32 @bar() #0 {
+entry:
+  %y = alloca i32, align 4
+  %call = call i32 @qux()
+  store i32 %call, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
+}
+
+define i32 @main() #0 {
+entry:
+  %bar_result = alloca i32, align 4
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
+  ret i32 0
+}
+\end{minted}
+
+% mod1 callgraph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod1/example_mod1_removing_prepare.pdf}
+    \caption{TODO: Caption}
+    \label{fig:mod1_prepare}
+\end{figure}
+
+
+% mod1 extracted graph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod1/example_mod1_removing_done.pdf}
+    \caption{TODO: Caption}
+    \label{fig:mod1_done}
+\end{figure}
+
+% === SUB-SECTION: Branching Instruction =======================================
+\subsection{Path Depending on the Branching Instruction}
+
+% mod2 C code
+\begin{minted}[label=example\_mod2.c,frame=lines,framesep=10pt,linenos]{C}
+int foo(int n) {
+    int x = n + 10;
+    return x;
+}
+
+int qux(void) {
+    return 42;
+}
+
+int bar(void) {
+    int y = qux();
+    return y;
+}
+
+int main(void) {
+    int some_int = 10;
+    int foo_result = foo(some_int);
+    int n = 10;
+    if (n < 42) {
+        int bar_result = bar();
+    }
+    return 0;
+}
+\end{minted}
+
+% mod2 IR
+\begin{minted}[label=example\_mod2.s,frame=lines,framesep=10pt,linenos]{llvm}
+define i32 @foo(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  %x = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32, i32* %n.addr, align 4
+  %add = add nsw i32 %0, 10
+  store i32 %add, i32* %x, align 4
+  %1 = load i32, i32* %x, align 4
+  ret i32 %1
+}
+
+define i32 @qux() #0 {
+entry:
+  ret i32 42
+}
+
+define i32 @bar() #0 {
+entry:
+  %y = alloca i32, align 4
+  %call = call i32 @qux()
+  store i32 %call, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
+}
+
+define i32 @main() #0 {
+entry:
+  %retval = alloca i32, align 4
+  %some_int = alloca i32, align 4
+  %foo_result = alloca i32, align 4
+  %n = alloca i32, align 4
+  %bar_result = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  store i32 10, i32* %some_int, align 4
+  %0 = load i32, i32* %some_int, align 4
+  %call = call i32 @foo(i32 %0)
+  store i32 %call, i32* %foo_result, align 4
+  store i32 10, i32* %n, align 4
+  %1 = load i32, i32* %n, align 4
+  %cmp = icmp slt i32 %1, 42
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret i32 0
+}
+\end{minted}
+
+% mod2 extracted
+\begin{minted}[label=example\_mod2\_extracted.s,frame=lines,framesep=10pt,linenos]{llvm}
+define i32 @qux() #0 {
+entry:
+  ret i32 42
+}
+
+define i32 @bar() #0 {
+entry:
+  %y = alloca i32, align 4
+  %call = call i32 @qux()
+  store i32 %call, i32* %y, align 4
+  %0 = load i32, i32* %y, align 4
+  ret i32 %0
+}
+
+define i32 @main() #0 {
+entry:
+  %n = alloca i32, align 4
+  %bar_result = alloca i32, align 4
+  store i32 10, i32* %n, align 4
+  %0 = load i32, i32* %n, align 4
+  %cmp = icmp slt i32 %0, 42
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %call1 = call i32 @bar()
+  store i32 %call1, i32* %bar_result, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret i32 0
+}
+\end{minted}
+
+
+% mod2 callgraph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod2/example_mod2_removing_prepare.pdf}
+    \caption{TODO: Caption}
+    \label{fig:mod2_prepare}
+\end{figure}
+
+
+% mod2 extracted graph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod2/example_mod2_removing_done.pdf}
+    \caption{TODO: Caption}
+    \label{fig:mod2_done}
+\end{figure}
+
+
 % === CHAPTER: Implementation ==================================================
 \chapter{Implementation: TODO}
 \label{chap:implementation}
