@@ -168,6 +168,9 @@
 \end{ThesisDeclaration}
 
 \begin{ThesisThanks}
+Mom, Dad, Martin, Marek Grac, Viktor, Pavel, Jozef, Majo, Pato, Mikasa, Astrix,
+Misa, Marketa, Tomas, Janka, Hanka, etc.
+
 Dedicated to those who are brave enough to read this stuff.
 
 You are heroes!
@@ -580,8 +583,6 @@ Procedure for finding mapping between C code referenced by the user input and
 its analogous IR instruction is implementation detail and is be described
 in the \autoref{chap:implementation}.
 
-\bigskip
-
 % next point
 When we apply the method on the contents of the
 \mintinline{text}{example.s} with respect to the source and target,
@@ -748,9 +749,9 @@ algorithm:
 0. Let G = data dependency graph
 1. Run |Breadth-first search \cite{clrs}| on G to visit each instruction
 2. IF instruction not in any component:
-      create new component and put instruction inside
+      Create new component and put instruction inside
    ELSE:
-      go to next instruction
+      Go to next instruction
 \end{minted}
 
 Running the above mentioned algorithm on the \textbf{data dependency graph}
@@ -816,7 +817,7 @@ We construct the call graph using the following algorithm:
       FOR EACH component C in the set CS(F):
          FOR EACH instruction I in the component C:
             IF instruction I is a call instruction to some function X:
-                store information X gets called from the C
+                Store information X gets called from the C
 \end{minted}
 
 Running the presented algorithm on the \textbf{data dependence graph}
@@ -911,7 +912,7 @@ worried that the execution starting from the source will not reach target.
 Having successfully found path from source to target in the last section,
 we know that each component that is part of the path cannot be marked as dead.
 Therefore, components outside of path have to be explored and the decision
-found weather they can be marked as dead and removed or not.
+found whether they can be marked as dead and removed or not.
 
 We can use the following basic algorithm for finding and eliminating dead
 components:
@@ -919,15 +920,15 @@ components:
 \begin{minted}[label=eliminating dead components,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let CS = set of all components in the code
 1. Let PATH = set of components on the path from source to target
-2. FOR EACH component C IN set CS:
+2. FOR EACH component C in set CS:
       IF component C is not in the set PATH:
          IF component C does not contain terminator:
-             mark component C as DEAD
-3. remove all components marked as DEAD
+             Mark component C as DEAD
+3. Remove all components marked as DEAD
 \end{minted}
 
-
 % example
+
 After applying the presented algorithm for eliminating dead components on the
 code from \mintinline{text}{example.s} we get the result that is visualised
 in the \autoref{fig:removing_prepare}.
@@ -964,24 +965,30 @@ Contents of the \mintinline{text}{example_extracted.s} are visualized in the
     \caption{
     \mintinline{text}{example_extracted.s}:
     Final state after removing dead components and functions.
+    \mintinline{text}{example.s}.
     }
     \label{fig:removing_done}
 \end{figure}
 
 % conclusion
 
-Unfortunately, the algorithm presented above works correctly only on the simple,
+Unfortunately, the basic algorithm presented above works correctly only with the
 non-complex inputs that are similar to the \mintinline{text}{example.s}.
-We will present two slightly more complicated programs to reveal the flaws of
-this algorithm.
-In order for method to work correctly, algorithm for eliminating dead components
-has to be extended to account for the introduced input complexities.
+We present two extensions of the \mintinline{text}{example.s} program in the
+\autoref{subsec:path_function} and \autoref{subsec:path_branching}
+along with the improvements of the basic algorithm that cover these two
+extensions.
 
 
 % === SUB-SECTION: External Function ===========================================
 \subsection{Path Depending on the External Function}
+\label{subsec:path_function}
 
-
+We modify the \mintinline{text}{example.c} by introducing new function
+\mintinline{C}{int qux(void)}. Also, we change line 7 of the
+\mintinline{text}{example.c} from
+\mintinline{C}{int y = 42} to \mintinline{C}{int y = qux()} and save these
+modifications to the \mintinline{text}{example_mod1.c}:
 
 % mod1 C code
 \begin{minted}[label=example\_mod1.c,frame=lines,framesep=10pt,linenos]{C}
@@ -1007,6 +1014,48 @@ int main(void) {
     return 0;
 }
 \end{minted}
+
+Target is the same (\mintinline{C}{int y = ...})
+as in the original example from the
+\autoref{sec:method_example} (line 7 in the \mintinline{text}{example.c}).
+In the \mintinline{text}{example_mod1.c}, target sits at the line 11.
+
+\mintinline{text}{example_mod1.c} compiled into the LLVM IR
+is stored in the \mintinline{text}{example_mod1.s}.
+Accordingly, the call graph with computed components and path for the
+\mintinline{text}{example_mod1.s} can be seen in the
+\autoref{fig:mod1_prepare}.
+
+When looking upon \autoref{fig:mod1_prepare}, we see that function bar calls
+function qux, but qux is not part of the computed path (only components with
+the blue color are part of the path, that is one component from main and one
+from foo). This is problematic for the basic algorithm that we introduced
+in the \autoref{sec:design-removing}. This basic algorithm would mark
+qux as dead and subsequently remove this function. However, this would break
+code integrity, because function qux has to be called in order for the execution
+to correctly proceed.
+Therefore, we propose modified algorithm for eliminating dead components that
+will take into the account the above described possibility.
+
+\begin{minted}[label=eliminating dead components - mod1,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let CS = set of all components in the code
+1. Let PATH = set of components on the path from source to target
+2. Recursively find all called functions that originate from PATH
+   using Breath-first search and add them to the PATH.
+3. FOR EACH component C in set CS:
+      IF component C is not in the set PATH:
+         IF component C does not contain terminator:
+             Mark component C as DEAD
+4. Remove all components marked as DEAD
+\end{minted}
+
+By using the above described algorithm instead of the basic one from the
+\autoref{sec:design-removing}, the path will contain function qux and therefore,
+function qux will not be marked as dead and removed.
+We can see the result of the algorithm in the \autoref{fig:mod1_done} with the
+corresponding code in the \mintinline{text}{example_mod1_extracted.s}.
+Function qux has not been removed which mean that the integrity of the code
+was maintained and executable could be successfully produced.
 
 % mod1 IR
 \begin{minted}[label=example\_mod1.s,frame=lines,framesep=10pt,linenos]{llvm}
@@ -1053,6 +1102,19 @@ entry:
 }
 \end{minted}
 
+% mod1 callgraph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod1/example_mod1_removing_prepare.pdf}
+    \caption{
+    \mintinline{text}{example_mod1.s}:
+    Components selected for removal are marked \emph{red}.
+    \emph{Yellow} component is not marked for removal, because it contains
+    terminator. \emph{Green} component was discovered by the modified algorithm
+    and has been added to the path and therefore will not be removed.
+    }
+    \label{fig:mod1_prepare}
+\end{figure}
 
 % mod1 extracted
 \begin{minted}[label=example\_mod1\_extracted.s,frame=lines,framesep=10pt,linenos]{llvm}
@@ -1079,27 +1141,80 @@ entry:
 }
 \end{minted}
 
-% mod1 callgraph
-\begin{figure}[ht]
-    \centering
-    \includegraphics[]{images/example_mod1/example_mod1_removing_prepare.pdf}
-    \caption{TODO: Caption}
-    \label{fig:mod1_prepare}
-\end{figure}
-
-
 % mod1 extracted graph
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/example_mod1/example_mod1_removing_done.pdf}
-    \caption{TODO: Caption}
+    \caption{
+    \mintinline{text}{example_mod1_extracted.s}:
+    Final state after removing dead components and functions from
+    \mintinline{text}{example_mod1.s}.
+    }
     \label{fig:mod1_done}
 \end{figure}
 
+
 % === SUB-SECTION: Branching Instruction =======================================
 \subsection{Path Depending on the Branching Instruction}
+\label{subsec:path_branching}
+
+To increase input complexity, lets take \mintinline{text}{example_mod1.c} and
+add branching inside main function as shown in the
+\mintinline{text}{example_mod2.c}.
+After taking look at the generated LLVM IR shown in the
+\mintinline{text}{example_mod2.s}, we can see branch instruction
+at the line 42.
+Also, there are present two new basic blocks that this branch instruction
+refers to:
+\mintinline{text}{if.then} and \mintinline{text}{if.end} (lines 44 and 49).
+
+If we take a closer look at the generated call graph for
+\mintinline{text}{example_mod2.s}
+(\autoref{fig:mod2_prepare}), we can observe that the branching instruction
+\mintinline{llvm}{br i1 %cmp, label %if.then, label %if.end} is in the
+component that is not part of the path. This is problematic, because if we
+look at the
+\mintinline{text}{example_mod2.c}.
+we can clearly see, that in order to get to the target (line 11),
+branching needs to be executed and thus included in the path.
+We present the algorithm from the previous subsection
+(\autoref{subsec:path_function}) with the extension that handles the above
+described scenario.
+
+\begin{minted}[label=eliminating dead components - mod2,breaklines,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let CS = set of all components in the code
+1. Let PATH = set of components on the path from source to target
+2. FOR EACH component C in PATH:
+      FOR EACH instruction I in C:
+          IF instruction I is part of basic block handled by the branch instruction:
+             FIND component with the branching instruction responsible for I and add it to the PATH
+3. Recursively find all called functions that originate from PATH
+   using Breath-first search and add them to the PATH.
+4. FOR EACH component C in set CS:
+      IF component C is not in the set PATH:
+         IF component C does not contain terminator:
+             Mark component C as DEAD
+5. Remove all components marked as DEAD
+\end{minted}
+
+As we can see in the
+\mintinline{text}{example_mod2.s}, if we examine instruction from the line 45,
+we can see that it belongs to the basic block
+\mintinline{text}{if.then}. This \mintinline{text}{if.then} basic block is
+handled by the branch instruction from the line 42. Therefore, algorithm will
+find component that contains this branch instruction and adds it to the path.
+The call graph with computed components and path that the algorithm takes as
+an input is shown in the \autoref{fig:mod2_prepare}.
+Component in the main function marked as green contains branching instruction
+that the algorithm identified as needed and therefore added to the path.
+
+The result of the algorithm are presented in the
+\mintinline{text}{example_mod2_extracted.s} and visually in the
+\autoref{fig:mod2_done}.
+
 
 % mod2 C code
+
 \begin{minted}[label=example\_mod2.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
     int x = n + 10;
@@ -1127,6 +1242,7 @@ int main(void) {
 \end{minted}
 
 % mod2 IR
+
 \begin{minted}[label=example\_mod2.s,frame=lines,framesep=10pt,linenos]{llvm}
 define i32 @foo(i32 %n) #0 {
 entry:
@@ -1181,7 +1297,23 @@ if.end:                                           ; preds = %if.then, %entry
 }
 \end{minted}
 
+% mod2 callgraph
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod2/example_mod2_removing_prepare.pdf}
+    \caption{
+    \mintinline{text}{example_mod2.s}:
+    Components selected for removal are marked \emph{red}.
+    \emph{Yellow} component is not marked for removal, because it contains
+    terminator. \emph{Green} components were discovered by the modified
+    algorithm and were added to the path and therefore will not be removed.
+    }
+    \label{fig:mod2_prepare}
+\end{figure}
+
 % mod2 extracted
+
 \begin{minted}[label=example\_mod2\_extracted.s,frame=lines,framesep=10pt,linenos]{llvm}
 define i32 @qux() #0 {
 entry:
@@ -1216,24 +1348,18 @@ if.end:                                           ; preds = %if.then, %entry
 }
 \end{minted}
 
-
-% mod2 callgraph
-\begin{figure}[ht]
-    \centering
-    \includegraphics[]{images/example_mod2/example_mod2_removing_prepare.pdf}
-    \caption{TODO: Caption}
-    \label{fig:mod2_prepare}
-\end{figure}
-
-
 % mod2 extracted graph
+
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/example_mod2/example_mod2_removing_done.pdf}
-    \caption{TODO: Caption}
+    \caption{
+    \mintinline{text}{example_mod2_extracted.s}:
+    Final state after removing dead components and functions from
+    \mintinline{text}{example_mod2.s}.
+    }
     \label{fig:mod2_done}
 \end{figure}
-
 
 % === CHAPTER: Implementation ==================================================
 \chapter{Implementation: TODO}
