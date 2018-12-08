@@ -1418,8 +1418,7 @@ clang -g -c -emit-llvm example.c -o example.bc
 \end{minted}
 
 Another necessary input to the opt is \textbf{libAPEXPass.so}. It is the pass
-itself compiled into the shared library. More information about the build
-process is discussed in the \autoref{sec:impl_launcher}.
+itself compiled into the shared library.
 
 APEXPass produces output \textbf{apex.bc}, which is the bitcode representation
 of the extracted part from the example.bc.
@@ -1429,7 +1428,7 @@ This extracted program can be executed directly with the tool lli as follows:
 lli apex.bc
 \end{minted}
 
-APEXPass can be defined within the LLVM framework as a \textbf{ModulPass}
+APEXPass can be defined within the LLVM framework as a \textbf{ModulePass}
 because it derives from the ModulePass class.\footnote{
 \url{https://llvm.org/doxygen/classllvm_1_1ModulePass.html}
 }
@@ -1440,10 +1439,10 @@ a ModulePass because it is the most general class of passes and thus provides
 the greatest flexibility.
 
 There are some disadvantages that comes to implementing pass as an ModulePass.
-To name a few, function bodies are are referred by no particular order sinde
-ModulePass handles entire program as a single unit. Also, there are no possible
+To name a few, function bodies are are referred by no particular order.
+Also, there are no possible
 optimizations to be done for ModulePass because optimizer does not have enough
-information about behaviour of the ModulePass.\cite{llvm-module-pass}
+information about its behaviors. \cite{llvm-module-pass}
 
 However, these disadvantages are not critical for our purposes and advantages
 of having whole program abstracted as a single unit outweigh the disadvantages.
@@ -1451,7 +1450,7 @@ of having whole program abstracted as a single unit outweigh the disadvantages.
 % === SUB-SECTION: APEXPass structure ==========================================
 \subsection{Structure of the APEXPass}
 
-In order to work correctly each ModulePass has to override runOnModule method
+In order to work correctly, each ModulePass has to override runOnModule method
 with the following signature:
 
 \mintinline{C}{
@@ -1462,12 +1461,13 @@ This method is the main part of the pass and performs computation of the pass.
 All five steps that we described in the \autoref{sec:method_overview} are going
 to be part of the \mintinline{C}{runOnModule} method.
 In this section, we are going to explain
-additional, implementation specific steps (in bold) that needed to be added to
+additional, implementation specific steps that needed to be added to
 the method.
 
-We add three additional steps the original five method steps described in the
-\autoref{sec:method_overview} (step 1, 7 and 8). We also explain implementation
-specific details behind step 2 in the subsequent subsection.
+We add three additional steps on top of the original five method steps
+described in the \autoref{sec:method_overview} (step 1, 7 and 8). We also
+explain implementation specific details behind step 2 in the subsequent
+subsection.
 
 The APEXPass structure therefore looks like this:
 
@@ -1484,7 +1484,7 @@ every function.
 that are being called from these components.
 \item Find path from source to target in the call graph.
 \item Eliminate dead components and functions that do not depend on the path.
-\item{\textbf{Inject exit and extract functions from apexlib into the code.}}
+\item{\textbf{Inject exit and extract function calls into the code.}}
 \item{\textbf{Strip debug symbols from the extracted code.}}
 \end{myEnumerate}
 
@@ -1517,16 +1517,16 @@ store i32 42, i32* %y, align 4
 The way we achieve mapping between original C source code and IR is by
 using source-level debug information that is introduced by the compiler
 (usually with the -g flag).
-The example.s with debug symbols is shown in the \autoref{appendix:example}.
+The example.s with debug symbols is shown in the \autoref{appendix:example_dbg}.
 Once the example.s is compiled with debug information, we can iterate from within
 the APEXPass over each instruction to find out its parent file name and
 line number using the following code:\cite{llvm-dbg}
 
 \begin{minted}[frame=lines,framesep=10pt]{cpp}
-for (const auto &F : M) {
-    for (const auto &BB : F) {
-        for (const auto &I : BB) {
-            if (DILocation *Loc = I->getDebugLoc()) {
+for (const auto &function : module) {
+    for (const auto &basic_block : function) {
+        for (const auto &instruction : basic_block) {
+            if (DILocation *Loc = instruction->getDebugLoc()) {
                 unsigned Line = Loc->getLine();
                 StringRef File = Loc->getFilename();
             }
@@ -1536,8 +1536,39 @@ for (const auto &F : M) {
 \end{minted}
 
 Once the Line and File match with the user input, we have found our target
-IR instruction. Note that there may be more IR instructions per one target
-(it depends on how complex the target is in the example.c).
+IR instruction.
+
+Depending on how complex the target line of code is, there may be more than one
+IR instructions associated with it. For example, taking the target line number
+7 from the example.c:
+
+\mintinline{C}{
+int y = 42;
+}
+
+IR instruction that maps to it is the following:
+
+\mintinline{llvm}{
+store i32 42, i32* %y, align 4
+}
+
+However, when we take as a target line number 2 from the example.c:
+
+\mintinline{C}{
+int x = n + 10;
+}
+
+Then, the mapping will be to the three following IR instructions:
+
+\begin{minted}[frame=lines,framesep=10pt]{llvm}
+%0 = load i32, i32* %n.addr, align 4
+%add = add nsw i32 %0, 10
+store i32 %add, i32* %x, align 4
+\end{minted}
+
+\mintinline{C}{int x = n + 10;} is much more complex line of code than
+\mintinline{C}{int y = 42;} and thus, is represented by more IR instructions.
+
 
 % === SUB-SECTION: Computing Data Dependencies With dg =========================
 \subsection{dg - Computing Data Dependencies}
@@ -1561,25 +1592,31 @@ data dependencies which APEXPass requires.
 
 % === SUB-SECTION: Injecting Exit and Extract Functions to the Code ============
 \subsection{Injecting Exit and Extract Functions}
+\label{sub:impl_inject}
 
-After having found the target instruction, we need to ensure that we get the
-data out of it and present it to the user. In order to accomplish this, we
-inject load instruction after the target. This way we load the value of the
-target into separate register and we use this register as an argument for the
-call to the dumping function that we inject right after.
-The last instruction that we inject at the end is call to exit, to ensure that
-the extracted program in apex.bc ends right after the target value is extracted.
+After having found the target instruction, we need to ensure that the execution
+of the extracted program stops right after the target has been reached.
+We do not want to execute program after it reached the target because it is
+contradictory of what our method should do.
+We also want to extract value of the target and provide this information to the
+user.
 
-We disassemble bitcode contents of the apex.bc into human readable IR
-and save it into the apex.ll file using llvm-dis tool:
+In order to accomplish this, we need to inject the following three additional
+instructions right after the target:
 
-\mintinline{bash}{
-    llvm-dis apex.bc -o apex.ll
-}
+\begin{myItemize}
+\item Load instruction X that takes value of the target and stores it into
+the separate register.
+\item Call instruction to extract function with X as an function argument.
+\item Call instruction to exit function which will terminate execution.
+\end{myItemize}
 
-The whole apex.ll with injected load and call instructions looks like this:
+Taking example\_extracted.s from the \autoref{sec:method_example} (with target
+\mintinline{llvm}{store i32 42, i32* %y, align 4}) and injecting exit and
+extract functions after the target gives the final result presented in the
+example\_extracted\_final.s code:
 
-\begin{minted}[label=apex.ll,frame=lines,framesep=10pt,linenos]{llvm}
+\begin{minted}[label=example\_extracted\_final.s,frame=lines,framesep=10pt,linenos]{llvm}
 define i32 @bar() #0 {
 entry:
   %y = alloca i32, align 4
@@ -1598,36 +1635,123 @@ entry:
   store i32 %call1, i32* %bar_result, align 4
   ret i32 0
 }
+\end{minted}
 
-
+As we can see on the lines 5,6 and 7, there are three new instructions injected
+right after the target. Instructions at lines 6 and 7 are call instructions
+to the extract and exit functions.
+Because these instructions call external functions, their definitions has to be
+linked to the program. This is done by the apex.py and is discussed in the
+\autoref{sec:impl_launcher}.
 
 
 % === SUB-SECTION: Stripping Debug Symbols =====================================
 \subsection{Stripping Debug Symbols}
 
+The last step that APEXPass performs is stripping debug information from the
+final code.
+The reason why we do this step is to be sure that the final extracted program
+is in the consistent state. APEXPass works with the code that contains debug symbols.
+Problem is that the three new injected instructions that were presented in the
+\autoref{sub:impl_inject} are without debug symbols. Having parts of the code
+with debug symbols and other parts without creates inconsistent state.
+Program in this inconsistent state would not be possible to compile into
+bitcode without issues.
 
-% === SUB-SECTION: Limitations =================================================
-\subsection{Limitations}
+There are two approaches that could resolve this issue:
+\begin{myEnumerate}
+\item{Add debug information to each new instruction that we insert into the code.}
+\item{Strip all debug information from the code.}
+\end{myEnumerate}
 
-%\subsection{Terminator Instructions}
+We have picked the second option, because it is sufficient to ensure code
+consistency and because of the ease of the implementation. LLVM provides API\footnote{
+\url{https://llvm.org/doxygen/DebugInfo_8cpp_source.html\#l00314}
+}
+for stripping debug information from function, therefore we can use the following
+code to strip all debug information from the entire program:
+
+\begin{minted}[frame=lines,framesep=10pt]{cpp}
+for (auto &Function : Module) {
+    llvm::stripDebugInfo(Function);
+}
+\end{minted}
+
+
 
 % === SECTION: Launcher ========================================================
-\section{Launcher}
+\section{APEX}
 \label{sec:impl_launcher}
 
-\footnote{
-\url{https://github.com/examon/APEX}
-}
+We have integrated APEXPass into the open-source tool called APEX, which is
+freely accessible in the repository: \url{https://github.com/examon/APEX}.
+APEX serves as an user-friendly wrapper around APEXPass
+while providing an easy way to run APEXPass without leaving user to
+worry about the internal structure.
 
+% === SUB-SECTION: apex.py =====================================================
+\subsection{apex.py}
 
-\subsection{compiling apexlib and linking input with apexlib and produce bitcode}
+There are multiple steps that need to be executed in order to properly
+run APEXPass. Therefore, we have implemented script apex.py that simplifies
+this process to the absolute minimum.
 
-\subsection{running apexpass with opt}
+Running APEXPass via launcher apex.py does require only python3. The following
+example demonstrates how to run APEXPass with the input example.bc, with target
+located in the file example.c on the line 2.
 
-\subsection{exporting call graph, dependency graph, disassembly bc}
+\begin{minted}[frame=lines,framesep=10pt]{bash}
+python apex.py example.bc example.c 2 --export=true
+\end{minted}
 
-\subsection{running final binaries, save result and logs}
+apex.py launcher has three mandatory command line arguments and one optional.
+First argument is input code in the llvm bitcode format. Second argument is the
+target file and third is target line of code in the file.
+Optional argument is boolean flag and when set to true, apex.py will
+export call graphs of the input and also the extracted program.
 
+Upon finishing execution, apex.py will run the extracted program automatically.
+Besides running extracted program, apex.py creates build directory with the
+following important files:
+\begin{myItemize}
+\item apex.bc: extracted program in the llvm bitcode format that can be run separately
+via tool lli.
+\item apex.out: output of the apex.bc.
+\item apex.log: log produced by the APEXPass.
+\end{myItemize}
+
+% === SUB-SECTION: linking apexlib =============================================
+\subsection{Linking apexlib and Input}
+
+The important step in the apex.py execution is linking apexlib with the user
+input. Linking has to be done because apexlib defines exit and extract
+functions and these functions need to be injected after the target
+(\autoref{sub:impl_inject}).
+
+Linking itself is performed in the following three setps:
+\begin{myEnumerate}
+\item Compile apexlib.c into the LLVM bitcode apexlib.bc.
+
+\mintinline{text}{clang -g -c -emit-llvm apexlib.c -o apexlib.bc}
+
+\item Link apexlib.bc with the user input (e.g. example.bc) and produce linked.ll
+IR code.
+
+\mintinline{text}{llvm-link apexlib.bc example.bc -S -o=linked.ll}
+
+\item Run assember on the linked.ll and produce bitcode linked.bc.
+
+\mintinline{text}{llvm-as build/linked.ll -o build/linked.bc}
+
+\end{myEnumerate}
+
+These three steps will essentially take user input example.bc, link to it
+library with the exit and extract functions apexlib.bc and produce output
+linked.bc that will now serve as an input to the APEXPass instead of the original
+input example.bc.
+
+linked.ll is available for comparison with example.s in the
+\autoref{appendix:linked}.
 
 % === CHAPTER: Experiments =====================================================
 \chapter{Experiments: TODO}
@@ -1745,7 +1869,7 @@ programs.
 
 
 % === APPENDIX: example.s ======================================================
-\chapter{\mintinline{text}{example.s}}
+\chapter{example.s}
 \label{appendix:example}
 
 \begin{minted}[frame=lines, framesep=10pt, breaklines,linenos]{llvm}
@@ -1804,8 +1928,8 @@ attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sq
 
 
 % === APPENDIX: example.s dbg ==================================================
-\chapter{example.s - With Debug Symbols}
-\label{appendix:example}
+\chapter{example.s With Debug Symbols}
+\label{appendix:example_dbg}
 
 
 \begin{minted}[frame=lines, framesep=10pt, breaklines,linenos]{llvm}
@@ -1907,6 +2031,162 @@ attributes #1 = { nounwind readnone speculatable }
 !35 = !DILocation(line: 14, column: 9, scope: !27)
 !36 = !DILocation(line: 14, column: 22, scope: !27)
 !37 = !DILocation(line: 16, column: 5, scope: !27)
+\end{minted}
+
+% === APPENDIX: linked.ll ======================================================
+\chapter{linked.ll}
+\label{appendix:linked}
+
+\begin{minted}[frame=lines, framesep=10pt, breaklines,linenos]{llvm}
+; ModuleID = 'llvm-link'
+source_filename = "llvm-link"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@.str = private unnamed_addr constant [3 x i8] c"%d\00", align 1
+
+; Function Attrs: noinline nounwind optnone uwtable
+define void @_apex_exit(i32 %exit_code) #0 !dbg !9 {
+entry:
+  %exit_code.addr = alloca i32, align 4
+  store i32 %exit_code, i32* %exit_code.addr, align 4
+  call void @llvm.dbg.declare(metadata i32* %exit_code.addr, metadata !13, metadata !14), !dbg !15
+  %0 = load i32, i32* %exit_code.addr, align 4, !dbg !16
+  call void @exit(i32 %0) #4, !dbg !17
+  unreachable, !dbg !17
+
+return:                                           ; No predecessors!
+  ret void, !dbg !18
+}
+
+; Function Attrs: nounwind readnone speculatable
+declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+
+; Function Attrs: noreturn nounwind
+declare void @exit(i32) #2
+
+; Function Attrs: noinline nounwind optnone uwtable
+define void @_apex_extract_int(i32 %i) #0 !dbg !19 {
+entry:
+  %i.addr = alloca i32, align 4
+  store i32 %i, i32* %i.addr, align 4
+  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !20, metadata !14), !dbg !21
+  %0 = load i32, i32* %i.addr, align 4, !dbg !22
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i32 %0), !dbg !23
+  ret void, !dbg !24
+}
+
+declare i32 @printf(i8*, ...) #3
+
+; Function Attrs: noinline nounwind optnone uwtable
+define i32 @foo(i32 %n) #0 !dbg !25 {
+entry:
+  %n.addr = alloca i32, align 4
+  %x = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  call void @llvm.dbg.declare(metadata i32* %n.addr, metadata !28, metadata !14), !dbg !29
+  call void @llvm.dbg.declare(metadata i32* %x, metadata !30, metadata !14), !dbg !31
+  %0 = load i32, i32* %n.addr, align 4, !dbg !32
+  %add = add nsw i32 %0, 10, !dbg !33
+  store i32 %add, i32* %x, align 4, !dbg !31
+  %1 = load i32, i32* %x, align 4, !dbg !34
+  ret i32 %1, !dbg !35
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define i32 @bar() #0 !dbg !36 {
+entry:
+  %y = alloca i32, align 4
+  call void @llvm.dbg.declare(metadata i32* %y, metadata !39, metadata !14), !dbg !40
+  store i32 42, i32* %y, align 4, !dbg !40
+  %0 = load i32, i32* %y, align 4, !dbg !41
+  ret i32 %0, !dbg !42
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define i32 @main() #0 !dbg !43 {
+entry:
+  %retval = alloca i32, align 4
+  %some_int = alloca i32, align 4
+  %foo_result = alloca i32, align 4
+  %bar_result = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  call void @llvm.dbg.declare(metadata i32* %some_int, metadata !44, metadata !14), !dbg !45
+  store i32 10, i32* %some_int, align 4, !dbg !45
+  call void @llvm.dbg.declare(metadata i32* %foo_result, metadata !46, metadata !14), !dbg !47
+  %0 = load i32, i32* %some_int, align 4, !dbg !48
+  %call = call i32 @foo(i32 %0), !dbg !49
+  store i32 %call, i32* %foo_result, align 4, !dbg !47
+  call void @llvm.dbg.declare(metadata i32* %bar_result, metadata !50, metadata !14), !dbg !51
+  %call1 = call i32 @bar(), !dbg !52
+  store i32 %call1, i32* %bar_result, align 4, !dbg !51
+  ret i32 0, !dbg !53
+}
+
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind readnone speculatable }
+attributes #2 = { noreturn nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { noreturn nounwind }
+
+!llvm.dbg.cu = !{!0, !3}
+!llvm.ident = !{!5, !5}
+!llvm.module.flags = !{!6, !7, !8}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.1 (tags/RELEASE_500/final)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!1 = !DIFile(filename: "src/apex/apexlib.c", directory: "/mnt/Documents/work/university/muni/msc/thesis/APEX")
+!2 = !{}
+!3 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4, producer: "clang version 5.0.1 (tags/RELEASE_500/final)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!4 = !DIFile(filename: "example.c", directory: "/mnt/Documents/work/university/muni/msc/thesis/APEX/examples/example")
+!5 = !{!"clang version 5.0.1 (tags/RELEASE_500/final)"}
+!6 = !{i32 2, !"Dwarf Version", i32 4}
+!7 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = !{i32 1, !"wchar_size", i32 4}
+!9 = distinct !DISubprogram(name: "_apex_exit", scope: !1, file: !1, line: 6, type: !10, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!10 = !DISubroutineType(types: !11)
+!11 = !{null, !12}
+!12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!13 = !DILocalVariable(name: "exit_code", arg: 1, scope: !9, file: !1, line: 6, type: !12)
+!14 = !DIExpression()
+!15 = !DILocation(line: 6, column: 21, scope: !9)
+!16 = !DILocation(line: 7, column: 8, scope: !9)
+!17 = !DILocation(line: 7, column: 3, scope: !9)
+!18 = !DILocation(line: 8, column: 1, scope: !9)
+!19 = distinct !DISubprogram(name: "_apex_extract_int", scope: !1, file: !1, line: 11, type: !10, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!20 = !DILocalVariable(name: "i", arg: 1, scope: !19, file: !1, line: 11, type: !12)
+!21 = !DILocation(line: 11, column: 28, scope: !19)
+!22 = !DILocation(line: 12, column: 16, scope: !19)
+!23 = !DILocation(line: 12, column: 3, scope: !19)
+!24 = !DILocation(line: 13, column: 1, scope: !19)
+!25 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 1, type: !26, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !3, variables: !2)
+!26 = !DISubroutineType(types: !27)
+!27 = !{!12, !12}
+!28 = !DILocalVariable(name: "n", arg: 1, scope: !25, file: !4, line: 1, type: !12)
+!29 = !DILocation(line: 1, column: 13, scope: !25)
+!30 = !DILocalVariable(name: "x", scope: !25, file: !4, line: 2, type: !12)
+!31 = !DILocation(line: 2, column: 9, scope: !25)
+!32 = !DILocation(line: 2, column: 13, scope: !25)
+!33 = !DILocation(line: 2, column: 15, scope: !25)
+!34 = !DILocation(line: 3, column: 12, scope: !25)
+!35 = !DILocation(line: 3, column: 5, scope: !25)
+!36 = distinct !DISubprogram(name: "bar", scope: !4, file: !4, line: 6, type: !37, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !3, variables: !2)
+!37 = !DISubroutineType(types: !38)
+!38 = !{!12}
+!39 = !DILocalVariable(name: "y", scope: !36, file: !4, line: 7, type: !12)
+!40 = !DILocation(line: 7, column: 9, scope: !36)
+!41 = !DILocation(line: 8, column: 12, scope: !36)
+!42 = !DILocation(line: 8, column: 5, scope: !36)
+!43 = distinct !DISubprogram(name: "main", scope: !4, file: !4, line: 11, type: !37, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false, unit: !3, variables: !2)
+!44 = !DILocalVariable(name: "some_int", scope: !43, file: !4, line: 12, type: !12)
+!45 = !DILocation(line: 12, column: 9, scope: !43)
+!46 = !DILocalVariable(name: "foo_result", scope: !43, file: !4, line: 13, type: !12)
+!47 = !DILocation(line: 13, column: 9, scope: !43)
+!48 = !DILocation(line: 13, column: 26, scope: !43)
+!49 = !DILocation(line: 13, column: 22, scope: !43)
+!50 = !DILocalVariable(name: "bar_result", scope: !43, file: !4, line: 14, type: !12)
+!51 = !DILocation(line: 14, column: 9, scope: !43)
+!52 = !DILocation(line: 14, column: 22, scope: !43)
+!53 = !DILocation(line: 16, column: 5, scope: !43)
 \end{minted}
 
 % === END ======================================================================
