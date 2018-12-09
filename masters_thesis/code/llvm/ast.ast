@@ -1,0 +1,25 @@
+TranslationUnitDecl 0x622b600 <<invalid sloc>> <invalid sloc>
+|-TypedefDecl 0x622bb50 <<invalid sloc>> <invalid sloc> implicit __int128_t '__int128'
+| `-BuiltinType 0x622b870 '__int128'
+|-TypedefDecl 0x622bbc0 <<invalid sloc>> <invalid sloc> implicit __uint128_t 'unsigned __int128'
+| `-BuiltinType 0x622b890 'unsigned __int128'
+|-TypedefDecl 0x622be98 <<invalid sloc>> <invalid sloc> implicit __NSConstantString 'struct __NSConstantString_tag'
+| `-RecordType 0x622bca0 'struct __NSConstantString_tag'
+|   `-Record 0x622bc18 '__NSConstantString_tag'
+|-TypedefDecl 0x622bf30 <<invalid sloc>> <invalid sloc> implicit __builtin_ms_va_list 'char *'
+| `-PointerType 0x622bef0 'char *'
+|   `-BuiltinType 0x622b690 'char'
+|-TypedefDecl 0x622c1f8 <<invalid sloc>> <invalid sloc> implicit __builtin_va_list 'struct __va_list_tag [1]'
+| `-ConstantArrayType 0x622c1a0 'struct __va_list_tag [1]' 1
+|   `-RecordType 0x622c010 'struct __va_list_tag'
+|     `-Record 0x622bf88 '__va_list_tag'
+`-FunctionDecl 0x6280fa8 <ast.c:1:1, line:3:1> line:1:5 add 'int (int, int)'
+  |-ParmVarDecl 0x622c268 <col:9, col:13> col:13 used a 'int'
+  |-ParmVarDecl 0x6280ed0 <col:16, col:20> col:20 used b 'int'
+  `-CompoundStmt 0x6281150 <col:23, line:3:1>
+    `-ReturnStmt 0x6281138 <line:2:2, col:11>
+      `-BinaryOperator 0x6281110 <col:9, col:11> 'int' '+'
+        |-ImplicitCastExpr 0x62810e0 <col:9> 'int' <LValueToRValue>
+        | `-DeclRefExpr 0x6281090 <col:9> 'int' lvalue ParmVar 0x622c268 'a' 'int'
+        `-ImplicitCastExpr 0x62810f8 <col:11> 'int' <LValueToRValue>
+          `-DeclRefExpr 0x62810b8 <col:11> 'int' lvalue ParmVar 0x6280ed0 'b' 'int'

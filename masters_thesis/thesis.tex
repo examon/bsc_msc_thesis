@@ -183,29 +183,23 @@ You are heroes!
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
-\begin{myItemize}
-\item{what is the problem?}
-Method for extraction of the subprogram from the original source code.
-
-\item{what is the solution of the problem?}
-What we do is based on the static analysis of the code and extracting
-relevant part of the program to the separate binary.
-Leveraging the LLVM infrastructure.
-
-\item{why is matters? why it is interesting?}
-Solution is implemented as a tool APEX. It can extract subprograms
-into standalone binaries.
-APEX can repeatedly run extracted part of the program without any other
-intermediary manual steps.
-
-\item{results}
+% what is the problem?
+This thesis presents method for extracting parts of programs into separate
+binaries.
+% what is the solution of the problem?
+The extraction method is based on static analysis and leverages the LLVM
+infrastructure.
+% why is matters? why it is interesting?
+Solution is implemented as a LLVM optimization pass and is integrated into the
+open-source tool APEX.
+Extracted binary can be executed repeatedly without any other intermediary
+manual steps.
+% write about experiments
 We have tested APEX on the set of 10 programs.
-
-\end{myItemize}
 \end{ThesisAbstract}
 
 \begin{ThesisKeyWords}
-    keyword, keyword, keyword, keyword, keyword, keyword
+LLVM, static analysis, program extraction
 \end{ThesisKeyWords}
 
 
@@ -215,7 +209,7 @@ We have tested APEX on the set of 10 programs.
 
 
 % === CHAPTER ==================================================================
-\chapter{Introduction: TODO}
+\chapter{Introduction}
 \label{chap:intro}
 
 User wants to know the value of some variable in the program. He/she can run
@@ -227,22 +221,22 @@ its value and provide it back to the user.
 The procedure described above is usually part of the standard standard approach
 when user want to get value of some selected variable during the program
 execution. Unfortunately, this approach is cumbersome in case when user want to
-execute above procedure many times. Procedure consists of many manual steps
+execute above procedure many times, because it consists of many manual steps
 which is time consuming to perform. Ideally, there could be script that takes
-line of code (or variable name) as an input and produces output with the value
-of the selected target
+line of code as an input and produces output with the value of the selected
+target
 
 Normally, this method would require to use debugger with the scripting support
 and write scripts that would instruct debugger what exactly to do, basically
 replicating the manual approach.
 
-Instead of scripting debugger to do the extraction, we could write tool that
-would accept the same user input as the approach above (line of code/variable
-name), run analysis on where the execution flow in the program would occur to
-get to the target instruction and transplant subset of the input program into
+Instead of scripting debugger to do the extraction, we could write a tool that
+would accept line of code as an input
+, run analysis on where the execution flow in the program would occur to
+get to the target instruction and transplant subset of the program into
 separate binary.
 
-This way, user will have separate, executable that upon running would produce
+This way, user will have separate executable that, upon running would produce
 value of the targeted instruction, without having to manually step thought or
 script debugger.
 
@@ -252,28 +246,29 @@ selected program subset should be extracted from the original program provided
 by the user and synthesized as an independent, executable binary.
 
 Proposed solution should be implemented in a tool having appropriate form,
-either as a standalone application or an LLVM plugin. It should easily accept
-user to provide their own input programs.
+preferably using LLVM infrastructure. It should easily allow
+user to provide input of choice.
 
-Finally, tool should be used to test at least two real-world open-source C
+Implemented tool should be tested on at least two real-world open-source C
 programs in order to find where the room for improvements is and what could be
-improved in the future.
-
+achieved in the future.
 
 % summary of the thesis
 
-The following sections of this thesis are structured as follows.
-In the \autoref{chap:llvm} we will briefly introduce the LLVM compiler
-infrastructure.  Explain what makes it so popular and why we picked this tool
-for our implementation.
-The following \autoref{chap:design}, we will introduce method that is the basis
-of this thesis aim.
-We will devote \autoref{chap:implementation} for explaining specific details
-and intricacies of implementation.
-Experiments and their results will be discussed in the chapter
-\autoref{chap:experiments}. Finally \autoref{chap:conclusions} summarizes the
-results of this thesis and describes possible further research and development
-opportunities.
+The remainder of this thesis is structured as follows.
+
+In \autoref{chap:llvm} we briefly introduce the LLVM compiler
+infrastructure and explain what makes it so popular.
+
+We present method that is able to extract part of programs in
+\autoref{chap:design}, while \autoref{chap:implementation} explains specific
+implementation details and intricacies.
+
+Experiments and their results are discussed in the chapter
+\autoref{chap:experiments}.
+
+Finally \autoref{chap:conclusions} summarizes the results of this thesis and
+presents possible further research and development opportunities.
 
 
 % === CHAPTER: LLVM ============================================================
@@ -305,10 +300,10 @@ flexibility and modularity.
 \item Frontend is responsible for the first phase of compilation. Input code is
 parsed, processed, validated for errors and translated into the LLVM Intermediate
 Representation (IR). IR is used to represent code in the compiler (more about IR
-in the following section \autoref{sec:llvm-ir}).
-\item After the first phase, IR code is optionally put through
-optimization phase.  Optimizer can use various analysis and transform passes to
-improve the code and emits modified IR.
+in \autoref{sec:llvm-ir}).
+\item IR code may be optionally put through
+optimization during the second phase. Optimizer can use various analysis and transform
+passes to improve the code and emit modified IR.
 \item Third and final phase is the code generation. Various backends take
 IR and produce platform specific machine code.
 \end{myItemize}
@@ -323,11 +318,17 @@ provides those facilities.
 \section{Intermediate Representation}
 \label{sec:llvm-ir}
 
-\emph{LLVM assembly language is a Static Single Assignment (SSA) based
+LLVM assembly language is a Static Single Assignment (SSA)
+\footnote{
+SSA means that each variable is defined before it is being used and is assigned
+exactly once.
+}
+
+based
 representation that provides type safety, low-level operations, flexibility,
 and the capability of representing ‘all’ high-level languages cleanly. It is
 the common code representation used throughout all phases of the LLVM
-compilation strategy.}
+compilation strategy.
 \cite{llvm-ir}
 
 LLVM code can be represented by the following three equivalent forms:
@@ -428,8 +429,9 @@ entry as it processor and thus form branching.
 \label{sec:llvm-opt}
 
 LLVM uses the concept of passes for the optimizations. Concrete optimizations
-are implemented as Passes that work with some portion of program code (e.g.
-Module, Function, Loop, etc.) to collect or transform this portion of the code.
+are implemented as a \textbf{pass} that works with some portion of program code
+(e.g.  Module, Function, Loop, etc.) to collect or transform this portion of
+the code.
 \cite{llvm-passes} Pass is a optimization unit that is executed in the second
 phase of the compilation process (\autoref{fig:llvm_arch}) or can be executed
 separately with opt tool.\footnote{
@@ -476,20 +478,70 @@ Examples:
 \section{Clang}
 \label{sec:llvm-clang}
 
-"The Clang project provides a language front-end and tooling infrastructure for
-languages in the C language family"
+\emph{The Clang project provides a language front-end and tooling
+infrastructure for languages in the C language family.}\cite{clang}
 
-Features and Goals (some overview of clang):
-- End-User Features
-- Utility and Applications
-- Internal Design and Implementation
+Clang uses LLVM infrastructure for optimizations and code generation (as is
+described in \autoref{fig:llvm_arch}).
+Clang AST (Abstract Syntax Tree)\footnote{
+Syntactic structure of the source code represented in as a tree.
+} closely represents the underlying code and does not abstract away elements
+that are useful refactoring tools.\cite{clang-ast}.
 
-AST
-- what is AST
-- AST in clang
-- Differences between clang AST and other compilers ASTs
-- We will not use clangs AST, we will work directly with IR, it better suits
-this project
+\begin{minted}[label=add.c,frame=lines,framesep=10pt]{C}
+int add(int a, int b) {
+    return a+b;
+}
+\end{minted}
+
+Getting the AST from the code above is as simple as running clang with the
+following command line arguments:
+
+\mintinline{text}{
+clang -Xclang -ast-dump -fsyntax-only add.c
+}
+
+\begin{minted}[label=add.c AST,frame=lines,framesep=10pt,breaklines]{text}
+TranslationUnitDecl 0x622b600 <<invalid sloc>> <invalid sloc>
+... leaving out internal clang declarations ...
+`-FunctionDecl 0x6280fa8 <ast.c:1:1, line:3:1> line:1:5 add 'int (int, int)'
+  |-ParmVarDecl 0x622c268 <col:9, col:13> col:13 used a 'int'
+  |-ParmVarDecl 0x6280ed0 <col:16, col:20> col:20 used b 'int'
+  `-CompoundStmt 0x6281150 <col:23, line:3:1>
+    `-ReturnStmt 0x6281138 <line:2:2, col:11>
+      `-BinaryOperator 0x6281110 <col:9, col:11> 'int' '+'
+        |-ImplicitCastExpr 0x62810e0 <col:9> 'int' <LValueToRValue>
+        | `-DeclRefExpr 0x6281090 <col:9> 'int' lvalue ParmVar 0x622c268 'a' 'int'
+        `-ImplicitCastExpr 0x62810f8 <col:11> 'int' <LValueToRValue>
+          `-DeclRefExpr 0x62810b8 <col:11> 'int' lvalue ParmVar 0x6280ed0 'b' 'int'
+\end{minted}
+
+Clang AST provides great value for developers. Nevertheless, instead of the
+AST, we will work in this thesis directly with the IR because it provides
+greater flexibility via LLVM API.\footnote{
+\url{https://llvm.org/doxygen/namespacellvm.html}
+}
+
+Clang also is able to emit IR for the add.c with the following simple command:
+
+\mintinline{text}{
+clang -S -emit-llvm ast.c -o ast.s
+}
+
+\begin{minted}[label=add.s,frame=lines,framesep=10pt,breaklines]{llvm}
+define i32 @add(i32 %a, i32 %b) #0 {
+entry:
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  %0 = load i32, i32* %a.addr, align 4
+  %1 = load i32, i32* %b.addr, align 4
+  %add = add nsw i32 %0, %1
+  ret i32 %add
+}
+\end{minted}
+
 
 % ==============================================================================
 % === CHAPTER: Design of the Method ============================================
