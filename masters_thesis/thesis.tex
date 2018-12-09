@@ -276,132 +276,203 @@ results of this thesis and describes possible further research and development
 opportunities.
 
 
-\chapter{The LLVM Compiler Infrastructure: TODO}
+% === CHAPTER: LLVM ============================================================
+\chapter{The LLVM Compiler Infrastructure:}
 \label{chap:llvm}
 
-"The LLVM (FOOTNOTE:The name "LLVM" itself is not an acronym; it is the full
-name of the project.) Project is a collection of modular and reusable compiler
-and toolchain technologies." \cite{llvm}
+\emph{The LLVM project is a collection of modular and reusable compiler and
+toolchain technologies.} \cite{llvm}
+Designed to be compatible with already existing UNIX tools, LLVM includes
+set of low-level tools like Clang compiler, assembler, debugger, etc. \cite{asoa}
 
-"an umbrella project that hosts and develops a set of close-knit low-level
-toolchain components (e.g., assemblers, compilers, debuggers, etc.), which are
-designed to be compatible with existing tools typically used on Unix systems"
 
-"the main thing that sets LLVM apart from other compilers is its internal
-architecture." [6] Primary subprojects:
+\section{Architecture}
+\label{sec:llvm-arch}
 
-LLVM core clang ...  Strengths: "A major strength of LLVM is its versatility,
-flexibility, and reusability"
+The main distinguishing feature that separates LLVM from other compiler
+frameworks is its internal structure. LLVM compiler leverages tree-phase
+architecture shown in the \autoref{fig:llvm_arch} to achieve higher degree of
+flexibility and modularity.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/llvm/llvm_arch.pdf}
+    \caption{LLVM Compiler Architecture.}
+    \label{fig:llvm_arch}
+\end{figure}
+
+\begin{myItemize}
+\item Frontend is responsible for the first phase of compilation. Input code is
+parsed, processed, validated for errors and translated into the LLVM Intermediate
+Representation (IR). IR is used to represent code in the compiler (more about IR
+in the following section \autoref{sec:llvm-ir}).
+\item After the first phase, IR code is optionally put through
+optimization phase.  Optimizer can use various analysis and transform passes to
+improve the code and emits modified IR.
+\item Third and final phase is the code generation. Various backends take
+IR and produce platform specific machine code.
+\end{myItemize}
+
+The huge advantage of this architecture is the fact that the optimizer and
+backend phase work with the IR instead of the language specific source code.
+This means that the compiler developer can write frontend for the new language
+that translates source code to the IR and does not have to write optimizations
+and code generator because LLVM infrastructure works with the IR and already
+provides those facilities.
 
 \section{Intermediate Representation}
 \label{sec:llvm-ir}
 
-% subsection
-Introduction
-- IR AKA LLVM assembly language AKA LLVM
+\emph{LLVM assembly language is a Static Single Assignment (SSA) based
+representation that provides type safety, low-level operations, flexibility,
+and the capability of representing ‘all’ high-level languages cleanly. It is
+the common code representation used throughout all phases of the LLVM
+compilation strategy.}
+\cite{llvm-ir}
 
-- "LLVM is a Static Single Assignment (SSA) based representation that provides
-type safety, low-level operations, flexibility, and the capability of
-representing ‘all’ high-level languages cleanly. It is the common code
-representation used throughout all phases of the LLVM compilation strategy."
+LLVM code can be represented by the following three equivalent forms:
+\begin{myEnumerate}
+\item Compiler intermediate representation (IR) that resides in the memory.
+\item Bitcode stored in the file.
+\item Assembly representation that is human readable.
+\end{myEnumerate}
 
-- Aims:
- - "The LLVM representation aims to be light-weight and low-level while being
- expressive, typed, and extensible at the same time."
+\bigskip
+\noindent
+We present the simple C function foo, stored in the file foo.c:
 
-- Representations of IR:
- - as an in-memory compiler IR
- - as an on-disk bitcode representation (suitable for fast loading by a
- Just-In-Time compiler)
- - as a human readable assembly language representation
-
-% subsection
-Example of the IR
-
-We have the following C function add
-
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{C}
-int add(int a, int b) {
-    return a+b;
+\begin{minted}[label=foo.c,frame=lines,framesep=10pt]{C}
+int foo(int a, int b) {
+    if (a > b) {
+        return a+b;
+    } else {
+        return a-b;
+    }
 }
 \end{minted}
 
-When using clang compiler with -emit-llvm flag, we get the following representation in IR:
+The LLVM Intermediate Representation of the foo.c is presented in the following
+code:
 
-\begin{minted}[ framesep=2mm,
-                autogobble,
-                frame=lines]{llvm}
-define i32 @add(i32 %a, i32 %b) #0 {
+\begin{minted}[label=foo.s,frame=lines,framesep=10pt]{llvm}
+define i32 @foo(i32 %a, i32 %b) #0 {
 entry:
+  %retval = alloca i32, align 4
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
   store i32 %a, i32* %a.addr, align 4
   store i32 %b, i32* %b.addr, align 4
   %0 = load i32, i32* %a.addr, align 4
   %1 = load i32, i32* %b.addr, align 4
-  %add = add nsw i32 %0, %1
-  ret i32 %add
+  %cmp = icmp sgt i32 %0, %1
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  %2 = load i32, i32* %a.addr, align 4
+  %3 = load i32, i32* %b.addr, align 4
+  %add = add nsw i32 %2, %3
+  store i32 %add, i32* %retval, align 4
+  br label %return
+
+if.else:                                          ; preds = %entry
+  %4 = load i32, i32* %a.addr, align 4
+  %5 = load i32, i32* %b.addr, align 4
+  %sub = sub nsw i32 %4, %5
+  store i32 %sub, i32* %retval, align 4
+  br label %return
+
+return:                                           ; preds = %if.else, %if.then
+  %6 = load i32, i32* %retval, align 4
+  ret i32 %6
+}
 \end{minted}
 
-% subsection
-High Level Structure
+LLVM programs are composed out of units called \textbf{modules}. Two or more
+modules can be combined together with the linker.\footnote{
+Two bitcode modules can be linked with tool llvm-link. More info at
+\url{https://llvm.org/docs/CommandGuide/llvm-link.html}
+}
+\autoref{fig:llvm_module} presents the simple architecture of the LLVM module.
 
-- Module structure:
- - functions
- - global variables
- - symbol table entries
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/llvm/llvm_module.pdf}
+    \caption{LLVM Module Structure.}
+    \label{fig:llvm_module}
+\end{figure}
 
-- using LLVM linker for module combination
- - we will use this in practice
+Each module can include several functions, which in turn can contain several
+basic blocks.
 
-- Functions:
- - "A function definition contains a list of basic blocks, forming the CFG
- (Control Flow Graph) for the function."
- - PHI nodes
+\textbf{Function} in the LLVM defines a list of basic blocks, which form the
+control flow graph of the function (blocks A and B in \autoref{fig:llvm_module}.
+\cite{llvm-ir}
 
+A \textbf{basic block} is a type of container that contains instructions that
+are execute sequentially.\cite{llvm-bb} Each basic blocks is formed with
+non-terminating instructions and single terminator instruction at the end of
+the block. Only terminator instructions can terminate a basic block\footnote{
+\url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
+}
+(in the case of \autoref{fig:llvm_module}, terminators would be Instruction 3
+in both basics blocks).
 
-\section{Optimisations}
+In the case of foo.s, we can see that the function foo contains four basic
+blocks: entry, if.then, if.else and return.
+Basic block entry is special in a way that it is the first basic block in the
+foo function and thus is executed always first. entry basic block is also
+prohibited to have any predecessors unlike for example if.then, which have
+entry as it processor and thus form branching.
+
+\section{Optimizations}
 \label{sec:llvm-opt}
 
-LLVM uses the concept of Passes for the optimisations. Concrete optimisations
+LLVM uses the concept of passes for the optimizations. Concrete optimizations
 are implemented as Passes that work with some portion of program code (e.g.
 Module, Function, Loop, etc.) to collect or transform this portion of the code.
-\cite{llvm-passes}
+\cite{llvm-passes} Pass is a optimization unit that is executed in the second
+phase of the compilation process (\autoref{fig:llvm_arch}) or can be executed
+separately with opt tool.\footnote{
+\url{https://llvm.org/docs/CommandGuide/opt.html}
+}
 
-There are the following types of passes:
+There are three types of passes:
 
-Analysis passes
-- Analysis passes collect information from the IR and feed it into the other
-passes. They can be also used for the debugging purposes, for example pass that
-counts number of functions in the module.
-
-Examples:
-
-- basiccg: Basic CallGraph Construction
-- dot-callgraph: Print Call Graph to “dot” file
-- instcount: Counts the various types of Instructions
-
-Transform passes
-- Transform passes change the program in some way. They can use some analysis
-pass that has been ran before and produced some information.
+\begin{myEnumerate}
+\item \textbf{Analysis passes:} Collect information from the IR and feed it into
+the other passes. They can be also used for the debugging purposes (e.g.
+pass that counts number of functions in the module).
 
 Examples:
+\begin{myItemize}
+\item basiccg: Basic CallGraph Construction
+\item dot-callgraph: Print Call Graph to “dot” file
+\item instcount: Counts the various types of Instructions
+\end{myItemize}
 
-- dce: Dead Code Elimination
-- loop-deletion: Delete dead loops
-- loop-unroll: Unroll loops
-
-Utility passes
-- Utility passes do not fit into analysis passes or transform passes categories.
+\item \textbf{Transform passes:} Change the program in some way. They can use
+some analysis pass that has been ran before and produced some information.
 
 Examples:
+\begin{myItemize}
+\item dce: Dead Code Elimination
+\item loop-deletion: Delete dead loops
+\item loop-unroll: Unroll loops
+\end{myItemize}
 
-- verify: Module Verifier
-- view-cfg: View CFG of function
-- instnamer: Assign names to anonymous instructions
+\item \textbf{Utility passes:} Do not fit into analysis passes or transform passes categories.
 
+Examples:
+\begin{myItemize}
+\item verify: Module Verifier
+\item view-cfg: View CFG of function
+\item instnamer: Assign names to anonymous instructions
+\end{myItemize}
+
+\end{myEnumerate}
+
+
+% === SECTION: Clang ===========================================================
 \section{Clang}
 \label{sec:llvm-clang}
 
@@ -1644,6 +1715,8 @@ Because these instructions call external functions, their definitions has to be
 linked to the program. This is done by the apex.py and is discussed in the
 \autoref{sec:impl_launcher}.
 
+%TODO: explain that extracting value is possible based on type
+
 
 % === SUB-SECTION: Stripping Debug Symbols =====================================
 \subsection{Stripping Debug Symbols}
@@ -1676,8 +1749,6 @@ for (auto &Function : Module) {
     llvm::stripDebugInfo(Function);
 }
 \end{minted}
-
-
 
 % === SECTION: Launcher ========================================================
 \section{APEX}
