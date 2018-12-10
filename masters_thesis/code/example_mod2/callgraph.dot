@@ -1,0 +1,18 @@
+digraph "Call graph" {
+	label="Call graph";
+
+	Node0x36d6100 [shape=record,label="{external node}"];
+	Node0x36d6100 -> Node0x36d61a0;
+	Node0x36d6100 -> Node0x36d6240;
+	Node0x36d6100 -> Node0x36d61d0;
+	Node0x36d6100 -> Node0x36d63d0;
+	Node0x36d6100 -> Node0x36d6470;
+	Node0x36d63d0 [shape=record,label="{bar}"];
+	Node0x36d63d0 -> Node0x36d61d0;
+	Node0x36d6470 [shape=record,label="{main}"];
+	Node0x36d6470 -> Node0x36d61a0;
+	Node0x36d6470 -> Node0x36d63d0;
+	Node0x36d6240 [shape=record,label="{llvm.dbg.declare}"];
+	Node0x36d61a0 [shape=record,label="{foo}"];
+	Node0x36d61d0 [shape=record,label="{qux}"];
+}

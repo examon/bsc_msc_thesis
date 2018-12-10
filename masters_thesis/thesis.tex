@@ -181,8 +181,8 @@ during my studies.
 I would like to thank everybody that supported me in any shape or form on this
 journey. In no particular order: Majo, Jozef, Paťo, Mikasa, Astrix,
 Miša, Markéta, Tomáš, Janka, Hanka, Žofka, Vlastík, Mišo, Dominik, Stela, Ondra,
-Kristína, Grandma, Lukáš, Maroš, Palo and others that I forgot to mention.
-Thank you.
+Kristína, Grandma, Lukáš, Majky, Maroš, Palo and others that I forgot to
+mention. Thank you.
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
@@ -1358,7 +1358,6 @@ The result of the algorithm are presented in the
 
 
 % mod2 C code
-
 \begin{minted}[label=example\_mod2.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
     int x = n + 10;
@@ -1890,13 +1889,21 @@ linked.ll is available for comparison with example.s in the
 \autoref{appendix:linked}.
 
 % === CHAPTER: Experiments =====================================================
-\chapter{Experiments: WIP}
+\chapter{Experiments}
 \label{chap:experiments}
 
+We present four experiments in this chapter. The aim of the experiments is to
+test APEX on various inputs and determine if the implementation can handle
+basic programs.
+
 % === SECTION: example_mod2.c ==================================================
+\section{test.c}
+\label{sec:exp_test}
 
+The first experiment will be conducted on the code example\_mod2.c, which we
+introduced in \autoref{subsec:path_branching}.
 
-\begin{minted}[label=yes.c,frame=lines,framesep=10pt,linenos]{C}
+\begin{minted}[label=example\_mod2.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
     int x = n + 10;
     return x;
@@ -1922,34 +1929,60 @@ int main(void) {
 }
 \end{minted}
 
+We run -dot-callgraph pass via opt tool and dot with the following commands to generate call graph from the
+example\_mod2.bc (\autoref{fig:exp_img_mod2}):
+
+\mintinline{text}{
+opt -dot-callgraph example_mod2.bc && dot callgraph.dot -Tsvg -O
+}
+
+\autoref{fig:exp_img_mod2} serves as as reference for the subsequent stages of
+this experiment.
+
+% after linking
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=1.0\textwidth]{images/experiments/mod2_linked.pdf}
+    \includegraphics[width=0.75\textwidth]{images/experiments/mod2_linked.pdf}
     \caption{
     \mintinline{text}{example_mod2.c}
-    After linking.
+    call graph after linking and before running APEXPass.
     }
     \label{fig:exp_img_mod2}
 \end{figure}
 
-
-
+% target 16
 \begin{minted}[frame=lines,framesep=10pt,breaklines]{shell}
 $ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 16
 $ ./extracted
 10
 \end{minted}
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/experiments/mod2_target16.pdf}
+    \caption{
+    \mintinline{text}{example_mod2.c}
+    call graph after extraction with target on line 16.
+    }
+    \label{fig:exp_img_mod2_target16}
+\end{figure}
+
+% target 20
 \begin{minted}[frame=lines,framesep=10pt,breaklines]{shell}
 $ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 20
 $ ./extracted
 42
-
-$ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 2
-$ ./extracted
-20
 \end{minted}
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/experiments/mod2_target20.pdf}
+    \caption{
+    \mintinline{text}{example_mod2.c}
+    call graph after extraction with target on line 20.
+    }
+    \label{fig:exp_img_mod2_target20}
+\end{figure}
 
 
 % === SECTION: yes.c ===========================================================
