@@ -168,48 +168,49 @@
 \end{ThesisDeclaration}
 
 \begin{ThesisThanks}
-Mom, Dad, Martin, Marek Grac, Viktor, Pavel, Jozef, Majo, Pato, Mikasa, Astrix,
-Misa, Marketa, Tomas, Janka, Hanka, etc.
+I would like to thank my advisor Marek Grác for his time and for making this
+thesis possible.
+Many thanks to my consultant Viktor Malík for sharing his knowledge and
+willingness to always help.
+Thanks to Pavel Odvody for coming up with the thesis idea and for his
+valuable feedback.
 
-Dedicated to those who are brave enough to read this stuff.
+Big thanks go to my family, Alena, Ľudovít and Martin for their support
+during my studies.
 
-You are heroes!
-
-\bigskip
-\begin{figure}[ht]
-    \includegraphics[width=320px]{images/one_does_not_simply.jpg}
-\end{figure}
-
+I would like to thank everybody that supported me in any shape or form on this
+journey. In no particular order: Majo, Jozef, Paťo, Mikasa, Astrix,
+Miša, Markéta, Tomáš, Janka, Hanka, Žofka, Vlastík, Mišo, Dominik, Stela, Ondra,
+Kristína, Grandma, Lukáš, Maroš, Palo and others that I forgot to mention.
+Thank you.
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
 This thesis presents method for extracting parts of programs into separate
 binaries.
-The extraction method is based on static analysis and leverages the LLVM
-infrastructure.
+The extraction method is based on static analysis of the program source code
+and leverages the LLVM infrastructure.
 Solution is implemented as LLVM optimization pass and is integrated into the
 open-source tool APEX.
 Extracted binary can be executed repeatedly without any other intermediary
 manual steps.
 Final solution is tested on three UNIX utilities.
 
-Táto práca prezentuje metódu na extrakciu časti programu do separátnych
-binárnych súborov.
-Metóda extrakcie je založená na statickej analýze a využíva LLVM
-infraštruktúru.
-Riešenie je implementované ako LLVM optimalizačný pass a následne integrované
-do open-source nástroja APEX.
-Extrahovaný binárny súbor môže byť opakovane spúšťaný bez ďalších manuálnych
-medzikrokov.
-Finálne riešenie je testované na troch UNIXových nástrojoch.
+%Táto práca prezentuje metódu na extrakciu časti programu do separátnych
+%binárnych súborov.
+%Metóda extrakcie je založená na statickej analýze zdrojového kódu a využíva LLVM
+%infraštruktúru.
+%Riešenie je implementované ako LLVM optimalizačný priechod a následne integrované
+%do open-source nástroja APEX.
+%Extrahovaný binárny súbor môže byť opakovane spúšťaný bez ďalších manuálnych
+%medzikrokov.
+%Finálne riešenie je testované na troch UNIXových nástrojoch.
 \end{ThesisAbstract}
 
-
-
 \begin{ThesisKeyWords}
-LLVM, static analysis, program extraction
+static analysis, program analysis, program extraction, intermediate
+representation, code optimization, LLVM
 \end{ThesisKeyWords}
-
 
 \MainMatter
 \tableofcontents
@@ -1892,6 +1893,65 @@ linked.ll is available for comparison with example.s in the
 \chapter{Experiments: WIP}
 \label{chap:experiments}
 
+% === SECTION: example_mod2.c ==================================================
+
+
+\begin{minted}[label=yes.c,frame=lines,framesep=10pt,linenos]{C}
+int foo(int n) {
+    int x = n + 10;
+    return x;
+}
+
+int qux(void) {
+    return 42;
+}
+
+int bar(void) {
+    int y = qux();
+    return y;
+}
+
+int main(void) {
+    int some_int = 10;
+    int foo_result = foo(some_int);
+    int n = 10;
+    if (n < 42) {
+        int bar_result = bar();
+    }
+    return 0;
+}
+\end{minted}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1.0\textwidth]{images/experiments/mod2_linked.pdf}
+    \caption{
+    \mintinline{text}{example_mod2.c}
+    After linking.
+    }
+    \label{fig:exp_img_mod2}
+\end{figure}
+
+
+
+\begin{minted}[frame=lines,framesep=10pt,breaklines]{shell}
+$ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 16
+$ ./extracted
+10
+\end{minted}
+
+\begin{minted}[frame=lines,framesep=10pt,breaklines]{shell}
+$ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 20
+$ ./extracted
+42
+
+$ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 2
+$ ./extracted
+20
+\end{minted}
+
+
+
 % === SECTION: yes.c ===========================================================
 \section{yes.c}
 \label{sec:exp_yes}
@@ -2012,11 +2072,22 @@ From the experimentation, we can conclude that APEX can handle inputs with the
 complexity of the yes.c
 
 
-% === SECTION:  ===========================================================
+% === SECTION: domainname.c=====================================================
 \section{domainname.c}
 \label{sec:exp_domainname}
 
 \url{https://raw.githubusercontent.com/openbsd/src/master/bin/domainname/domainname.c}
+
+
+\begin{minted}[label=domainname.c,frame=lines,framesep=10pt,linenos]{C}
+
+\end{minted}
+
+% === SECTION: echo.c ==========================================================
+\section{echo.c}
+\label{sec:echo}
+
+
 
 
 
@@ -2046,88 +2117,12 @@ complexity of the yes.c
 \printbibliography
 
 % === CHAPTER ==================================================================
-\chapter{Archive structure}
+\chapter{Archive structure: TODO}
 \label{appendix:archive}
 
 Content of the attached archive:
 
 TBA TBA TBA
-
-% === REMOVE THIS BEFORE PRINTING ==============================================
-\chapter{Outline}
-
-Extracting Parts of Programs into Separate Binaries
-
-\begin{myEnumerate}
-\item Get acquainted with means of the compilation of C programs using the LLVM
-compiler infrastructure - clang, LLVM Internal Representation, AST, LLVM
-optimizations.
-\item Propose a solution to statically transplant a subset of a C program. This
-subset should be extracted from the original program and synthesized as an
-independent binary.
-\item Design and implement the proposed solution in a tool having an
-appropriate form (a standalone application or an LLVM plugin).
-\item Test the implemented tool on at least 2 real-world open-source C
-programs.
-\end{myEnumerate}
-
-\noindent\rule{\textwidth}{1pt}
-
-\begin{myItemize}
-
-\item Introdution
-    \begin{myItemize}
-    \item Give introduction to wider context
-    \item Clearly explain aim of the thesis
-    \item Give outline of the following chapters
-    \end{myItemize}
-
-\item The LLVM Compiler Infrastructure
-    \begin{myItemize}
-    \item IR
-    \item Optimizations
-    \item clang
-    \end{myItemize}
-
-\item Extracting Program Subsets
-    \begin{myItemize}
-    \item Intro
-    \item
-    \item Computing Data Dependencies
-    \item Finding Connected Components
-    \item Constructing Call Graph
-    \item Finding Path
-    \item Removing Unnecessary Parts
-    \end{myItemize}
-
-\item Implementation
-    \begin{myItemize}
-    \item APEX
-    \item APEXPass
-    \item Input Source Code
-    \item Parsing User Input (Locating Target Instructions)
-    \item Computing Dependencies using dg
-    \item Extracting Target Data (Injecting Exit and Extraction)
-        \begin{myItemize}
-        \item Stripping debug symbols
-        \end{myItemize}
-    \end{myItemize}
-
-\item Experiments
-    \begin{myItemize}
-    \item Experiment 1
-    \item Experiment 2
-    \item Experiment 3
-    \end{myItemize}
-
-\item Conclusion
-    \begin{myItemize}
-    \item Show our contribution to the problem
-    \item Show wider image in context to this thesis
-    \end{myItemize}
-
-\end{myItemize}
-
 
 
 % === APPENDIX: example.s ======================================================
@@ -2190,7 +2185,7 @@ attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sq
 
 
 % === APPENDIX: example.s dbg ==================================================
-\chapter{example.s With Debug Symbols}
+\chapter{example.s - with debug symbols}
 \label{appendix:example_dbg}
 
 
