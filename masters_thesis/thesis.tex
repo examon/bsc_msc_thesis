@@ -190,12 +190,12 @@ binaries.
 The extraction method is based on static analysis and leverages the LLVM
 infrastructure.
 % why is matters? why it is interesting?
-Solution is implemented as a LLVM optimization pass and is integrated into the
+Solution is implemented as LLVM optimization pass and is integrated into the
 open-source tool APEX.
 Extracted binary can be executed repeatedly without any other intermediary
 manual steps.
 % write about experiments
-We have tested APEX on the set of 10 programs.
+\textbf{TODO} We have tested APEX on the set of 10 programs.
 \end{ThesisAbstract}
 
 \begin{ThesisKeyWords}
@@ -212,42 +212,36 @@ LLVM, static analysis, program extraction
 \chapter{Introduction}
 \label{chap:intro}
 
-User wants to know the value of some variable in the program. He/she can run
-debugger of choice, set breakpoint at the selected variable location and let
-debugger execute input program step by step until it reaches the selected
-variable. Finally, debugger steps on the targeted variable and thus can extract
-its value and provide it back to the user.
-
-The procedure described above is usually part of the standard standard approach
-when user want to get value of some selected variable during the program
-execution. Unfortunately, this approach is cumbersome in case when user want to
-execute above procedure many times, because it consists of many manual steps
-which is time consuming to perform. Ideally, there could be script that takes
-line of code as an input and produces output with the value of the selected
-target
+Running debugger with set breakpoint at the selected variable location is the
+usual approach when user wants to know value of the variable.
+Unfortunately, this approach is cumbersome when user wants to execute this
+procedure many times.
+It consists of many manual steps, which are time consuming to perform.
+Ideally, there should be a script that accepts line of code as an input and
+produces value of the selected variable once the execution hits the desired
+line of code.
 
 Normally, this method would require to use debugger with the scripting support
 and write scripts that would instruct debugger what exactly to do, basically
 replicating the manual approach.
 
 Instead of scripting debugger to do the extraction, we could write a tool that
-would accept line of code as an input
-, run analysis on where the execution flow in the program would occur to
-get to the target instruction and transplant subset of the program into
-separate binary.
-
-This way, user will have separate executable that, upon running would produce
-value of the targeted instruction, without having to manually step thought or
+would accept line of code as an input, run analysis on where the execution
+path in the program occurs to get to the target instruction and transplant
+subset of the program with computed execution path into the separate binary.
+This way, user would have separate executable that, when executed, would produce
+value of the targeted instruction without having to manually step thought or
 script debugger.
 
-This thesis aims to devise method and implement this method in a tool for
-statically transplanting a subset of a C program. Using the devised method, the
-selected program subset should be extracted from the original program provided
-by the user and synthesized as an independent, executable binary.
+This thesis aims to devise method for statically transplanting a subset of a C
+program and implement it in a open-source tool.
+The selected program subset should be extracted from the
+original program provided by the user and synthesized as an independent,
+executable binary.
 
 Proposed solution should be implemented in a tool having appropriate form,
-preferably using LLVM infrastructure. It should easily allow
-user to provide input of choice.
+preferably using LLVM infrastructure. It should be user friendly and allow user
+to provide input of choice.
 
 Implemented tool should be tested on at least two real-world open-source C
 programs in order to find where the room for improvements is and what could be
@@ -262,12 +256,12 @@ infrastructure and explain what makes it so popular.
 
 We present method that is able to extract part of programs in
 \autoref{chap:design}, while \autoref{chap:implementation} explains specific
-implementation details and intricacies.
+implementation details.
 
-Experiments and their results are discussed in the chapter
+Experiments and results are discussed in the chapter
 \autoref{chap:experiments}.
 
-Finally \autoref{chap:conclusions} summarizes the results of this thesis and
+Finally, \autoref{chap:conclusions} summarizes the results of this thesis and
 presents possible further research and development opportunities.
 
 
@@ -352,7 +346,7 @@ int foo(int a, int b) {
 }
 \end{minted}
 
-The LLVM Intermediate Representation of the foo.c is presented in the following
+The LLVM Intermediate Representation of the foo.c is available in the following
 code:
 
 \begin{minted}[label=foo.s,frame=lines,framesep=10pt]{llvm}
@@ -388,12 +382,12 @@ return:                                           ; preds = %if.else, %if.then
 }
 \end{minted}
 
-LLVM programs are composed out of units called \textbf{modules}. Two or more
+LLVM programs are composed from units called \textbf{modules}. Two or more
 modules can be combined together with the linker.\footnote{
 Two bitcode modules can be linked with tool llvm-link. More info at
 \url{https://llvm.org/docs/CommandGuide/llvm-link.html}
 }
-\autoref{fig:llvm_module} presents the simple architecture of the LLVM module.
+\autoref{fig:llvm_module} shows architecture of the LLVM module.
 
 \begin{figure}[ht]
     \centering
@@ -406,11 +400,11 @@ Each module can include several functions, which in turn can contain several
 basic blocks.
 
 \textbf{Function} in the LLVM defines a list of basic blocks, which form the
-control flow graph of the function (blocks A and B in \autoref{fig:llvm_module}.
+control flow graph of the function (blocks A and B in \autoref{fig:llvm_module}).
 \cite{llvm-ir}
 
-A \textbf{basic block} is a type of container that contains instructions that
-are execute sequentially.\cite{llvm-bb} Each basic blocks is formed with
+A \textbf{basic block} is a type of a container that contains instructions that
+are executed sequentially.\cite{llvm-bb} Each basic blocks is formed with
 non-terminating instructions and single terminator instruction at the end of
 the block. Only terminator instructions can terminate a basic block\footnote{
 \url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
@@ -423,14 +417,14 @@ blocks: entry, if.then, if.else and return.
 Basic block entry is special in a way that it is the first basic block in the
 foo function and thus is executed always first. entry basic block is also
 prohibited to have any predecessors unlike for example if.then, which have
-entry as it processor and thus form branching.
+entry as it processor and thus allow branching of the program.
 
 \section{Optimizations}
 \label{sec:llvm-opt}
 
 LLVM uses the concept of passes for the optimizations. Concrete optimizations
-are implemented as a \textbf{pass} that works with some portion of program code
-(e.g.  Module, Function, Loop, etc.) to collect or transform this portion of
+are implemented in a \textbf{pass} that works with some portion of program code
+(e.g.  module, function, loop, etc.) to collect or transform portion of
 the code.
 \cite{llvm-passes} Pass is a optimization unit that is executed in the second
 phase of the compilation process (\autoref{fig:llvm_arch}) or can be executed
@@ -441,34 +435,34 @@ separately with opt tool.\footnote{
 There are three types of passes:
 
 \begin{myEnumerate}
-\item \textbf{Analysis passes:} Collect information from the IR and feed it into
+\item \textbf{Analysis:} Collect information from the IR and feed it into
 the other passes. They can be also used for the debugging purposes (e.g.
 pass that counts number of functions in the module).
 
 Examples:
 \begin{myItemize}
-\item basiccg: Basic CallGraph Construction
-\item dot-callgraph: Print Call Graph to “dot” file
-\item instcount: Counts the various types of Instructions
+\item basiccg: Basic CallGraph Construction.
+\item dot-callgraph: Print Call Graph to “dot” file.
+\item instcount: Counts the various types of Instructions.
 \end{myItemize}
 
-\item \textbf{Transform passes:} Change the program in some way. They can use
-some analysis pass that has been ran before and produced some information.
+\item \textbf{Transform:} Change the program in some way. They can use
+data that was produced by analysis pass.
 
 Examples:
 \begin{myItemize}
-\item dce: Dead Code Elimination
-\item loop-deletion: Delete dead loops
-\item loop-unroll: Unroll loops
+\item dce: Dead Code Elimination.
+\item loop-deletion: Delete dead loops.
+\item loop-unroll: Unroll loops.
 \end{myItemize}
 
-\item \textbf{Utility passes:} Do not fit into analysis passes or transform passes categories.
+\item \textbf{Utility:} Do not fit into analysis or transform pass categories.
 
 Examples:
 \begin{myItemize}
-\item verify: Module Verifier
-\item view-cfg: View CFG of function
-\item instnamer: Assign names to anonymous instructions
+\item verify: Module Verifier.
+\item view-cfg: View CFG of function.
+\item instnamer: Assign names to anonymous instructions.
 \end{myItemize}
 
 \end{myEnumerate}
@@ -481,8 +475,8 @@ Examples:
 \emph{The Clang project provides a language front-end and tooling
 infrastructure for languages in the C language family.}\cite{clang}
 
-Clang uses LLVM infrastructure for optimizations and code generation (as is
-described in \autoref{fig:llvm_arch}).
+Clang compiler uses LLVM infrastructure for optimizations and code generation
+(as is described in \autoref{fig:llvm_arch}).
 Clang AST (Abstract Syntax Tree)\footnote{
 Syntactic structure of the source code represented in as a tree.
 } closely represents the underlying code and does not abstract away elements
@@ -522,7 +516,7 @@ greater flexibility via LLVM API.\footnote{
 \url{https://llvm.org/doxygen/namespacellvm.html}
 }
 
-Clang also is able to emit IR for the add.c with the following simple command:
+Clang also is able to emit IR for the add.c with the following command:
 
 \mintinline{text}{
 clang -S -emit-llvm ast.c -o ast.s
@@ -1716,6 +1710,8 @@ data dependencies which APEXPass requires.
 % === SUB-SECTION: Injecting Exit and Extract Functions to the Code ============
 \subsection{Injecting Exit and Extract Functions}
 \label{sub:impl_inject}
+
+\textbf{TODO: examplain apex* functions and tell limitations}
 
 After having found the target instruction, we need to ensure that the execution
 of the extracted program stops right after the target has been reached.
