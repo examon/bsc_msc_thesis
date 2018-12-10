@@ -157,10 +157,10 @@
 
 % zadanie a prehlasenie
 % TODO: Comment this for the electronic version!
-%\includepdf[pages=-]{blank.pdf}
-%\includepdf[pages=-]{zadanie.pdf}
-%\includepdf[pages=-]{blank.pdf}
-%\includepdf[pages=-]{prehlasenie.pdf}
+\includepdf[pages=-]{blank.pdf}
+\includepdf[pages=-]{zadanie.pdf}
+\includepdf[pages=-]{blank.pdf}
+\includepdf[pages=-]{prehlasenie.pdf}
 
 \begin{ThesisDeclaration}
     \DeclarationText
@@ -183,20 +183,28 @@ You are heroes!
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
-% what is the problem?
 This thesis presents method for extracting parts of programs into separate
 binaries.
-% what is the solution of the problem?
 The extraction method is based on static analysis and leverages the LLVM
 infrastructure.
-% why is matters? why it is interesting?
 Solution is implemented as LLVM optimization pass and is integrated into the
 open-source tool APEX.
 Extracted binary can be executed repeatedly without any other intermediary
 manual steps.
-% write about experiments
-\textbf{TODO} We have tested APEX on the set of 10 programs.
+Final solution is tested on three UNIX utilities.
+
+Táto práca prezentuje metódu na extrakciu časti programu do separátnych
+binárnych súborov.
+Metóda extrakcie je založená na statickej analýze a využíva LLVM
+infraštruktúru.
+Riešenie je implementované ako LLVM optimalizačný pass a následne integrované
+do open-source nástroja APEX.
+Extrahovaný binárny súbor môže byť opakovane spúšťaný bez ďalších manuálnych
+medzikrokov.
+Finálne riešenie je testované na troch UNIXových nástrojoch.
 \end{ThesisAbstract}
+
+
 
 \begin{ThesisKeyWords}
 LLVM, static analysis, program extraction
@@ -1829,14 +1837,22 @@ target file and third is target line of code in the file.
 Optional argument is boolean flag and when set to true, apex.py will
 export call graphs of the input and also the extracted program.
 
-Upon finishing execution, apex.py will run the extracted program automatically.
-Besides running extracted program, apex.py creates build directory with the
+Upon finishing execution, apex.py will create executable called
+\textbf{extracted}. This executable contains extracted part of the program and
+can be run just like any unix executable:
+
+\mintinline{text}{
+./extracted
+}
+
+Besides producing exected executable, apex.py creates build directory with the
 following important files:
+
 \begin{myItemize}
-\item apex.bc: extracted program in the llvm bitcode format that can be run separately
+\item apex.bc: Extracted program in the llvm bitcode format that can be run separately
 via tool lli.
-\item apex.out: output of the apex.bc.
-\item apex.log: log produced by the APEXPass.
+\item apex.out: Output of the apex.bc.
+\item apex.log: Log produced by the APEXPass.
 \end{myItemize}
 
 % === SUB-SECTION: linking apexlib =============================================
@@ -1873,8 +1889,135 @@ linked.ll is available for comparison with example.s in the
 \autoref{appendix:linked}.
 
 % === CHAPTER: Experiments =====================================================
-\chapter{Experiments: TODO}
+\chapter{Experiments: WIP}
 \label{chap:experiments}
+
+% === SECTION: yes.c ===========================================================
+\section{yes.c}
+\label{sec:exp_yes}
+
+The following first experiment will be conducted on the classic UNIX utility
+called yes.
+yes repeatedly outputs a line with specified string or 'y' until
+killed.
+
+We will use source code from the simple open-source implementation of yes
+from the following repository: \url{https://github.com/mubaris/yes}
+
+Full C source code that implements yes is shown in the following code:
+
+\begin{minted}[label=yes.c,frame=lines,framesep=10pt,linenos]{C}
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define max(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+     __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; });
+
+int main(int argc, char* argv[]) {
+    char* output;
+    int output_size;
+    int output_len;
+
+    if (argc > 1) {
+        // Create buffer.
+        int needed_size = 2 + strlen(argv[1]);
+        for (int i = 2; i < argc; i++) {
+            needed_size += 1 + strlen(argv[i]);
+        }
+
+        output = (char*) malloc(needed_size);
+
+        // Append to buffer.
+        strcat(output, argv[1]);
+        for (int i = 2; i < argc; i++) {
+            strcat(output, " ");
+            strcat(output, argv[i]);
+        }
+        strcat(output, "\n");
+        output_len = strlen(output);
+    } else {
+        output = "y\n";
+        output_len = 2;
+    }
+
+    // Flood.
+    for(;;)
+        fwrite(output, 1, output_len, stdout);
+}
+\end{minted}
+
+First we need to compile yes.c into the LLVM bitcode with clang:
+
+\mintinline{text}{
+clang -g -c -emit-llvm yes.c -o yes.bc
+}
+
+Lets pick as a target line 17 from the if branch:
+:\mintinline{C}{
+int needed_size = 2 + strlen(argv[1]);
+}
+
+\begin{minted}[frame=lines,framesep=10pt]{shell}
+python apex.py examples/experiments/yes/yes.bc yes.c 17
+./extracted test
+> 6
+./extracted foobar
+> 8
+./extracted
+y
+y
+y
+...
+\end{minted}
+
+We can see that the extracted program outputs the value of
+\mintinline{C}{needed_size} when we provide command line argument.
+It also correctly executes the branch else when we do not prove any command line
+argument.
+
+When we pick target line 31: \mintinline{C}{output_len = strlen(output);}
+and run apex.py, we get the following output when executing extracted binary:
+
+\begin{minted}[frame=lines,framesep=10pt]{shell}
+python apex.py examples/experiments/yes/yes.bc yes.c 31
+./extracted test
+> 5
+./extracted foobar
+> 7
+./extracted
+y
+y
+y
+...
+\end{minted}
+
+Lets test the else branch of the code by picking target line 34:
+\mintinline{C}{output_len = 2;}
+
+\begin{minted}[frame=lines,framesep=10pt]{shell}
+python apex.py examples/experiments/yes/yes.bc yes.c 31
+./extracted test
+test
+test
+test
+...
+./extracted
+> 2
+\end{minted}
+
+From the experimentation, we can conclude that APEX can handle inputs with the
+complexity of the yes.c
+
+
+% === SECTION:  ===========================================================
+\section{domainname.c}
+\label{sec:exp_domainname}
+
+\url{https://raw.githubusercontent.com/openbsd/src/master/bin/domainname/domainname.c}
+
 
 
 % === CHAPTER: Conclusions =====================================================
