@@ -920,7 +920,7 @@ comes useful especially because we can answer the question if some particular
 instruction is in data dependency relationship with multiple other instructions
 (instructions that form a data dependency path, etc.).
 
-% === SECTION: Computing Call Grap =============================================
+% === SECTION: Computing Call Graph ============================================
 \section{Computing Call Graph}
 \label{sec:design-callgraph}
 
@@ -2377,9 +2377,20 @@ been removed and is no longer part of the extracted binary.
 \chapter{Conclusions}
 \label{chap:conclusions}
 
-% === SECTION ===
-\section{Summary of the Results}
-\label{sec:conclusions-summary}
+In this thesis, we presented the method of extacting parts of programs into
+separate binaries. We explained steps and algorithms that the method
+performs to achieve the desired extraction.
+
+We developed a LLVM transform pass (APEXPass) implementing the presented
+method by leveraging the LLVM infrastructure.
+APEXPass was integrated into the open-source tool APEX, which provides the
+user-fiendly experience.
+
+Lastly, we have tested APEX on one artifically created program and three
+classic UNIX tools. Experiments showed, that the method implemented in the APEX
+is sufficient for extracting parts of programs from simple inputs that are
+comparable in complexity to small UNIX tools.
+
 
 % focus on our specific contributions
 % focus on the wider view, what this thesis brought to the world
@@ -2389,16 +2400,27 @@ been removed and is no longer part of the extracted binary.
 \label{sec:conclusions-next}
 
 
-As we mentioned in the \autoref{sub:impl_inject}, extraction is currently limited
-by the type of the extracted value.
+As we mentioned in the \autoref{sub:impl_inject}, extraction is currently
+limited by the type of the extracted value.
 Possible improvement of the extraction procedure would be to implement
-extraction functions for every IR type.
+extraction functions for every IR type and thus extending apexlib.c.
+Implementing algorithm able to determine what type of extraction
+function is needed would be crucial in order to support all value types
+for extraction.
 
-and write algorithm that would determine
-what kind of extraction function would be injected into to code.
+Path finding procedure that we described in \autoref{sec:design-path} could be
+improved by finding multiple paths (not only one) and picking the best fitting
+one for the extraction. The best fitting path could be determined by some
+optimization criteria (e.g. shortest path, path without fewest external
+dependencies, etc.).
 
-% what could be improved theoretically? (e.g. multiple paths, etc.)
-% what could be improved technically? (e.g. better json dump)
+Another very useful improvement would be to extend coverage of the dead
+code elimination procedure explained in \autoref{sec:design-removing}.
+We have already presented two extensions to this procedure
+(\autoref{subsec:path_function} and \autoref{subsec:path_branching}).
+Designing even more extensions would allow the method to cover more
+complex IR code than now and thus would allow extraction from more complicated
+C programs.
 
 
 % === BIBLIOGRAPHY =============================================================
@@ -2408,12 +2430,17 @@ what kind of extraction function would be injected into to code.
 \printbibliography
 
 % === CHAPTER ==================================================================
-\chapter{Archive structure: TODO}
+\chapter{Archive structure}
 \label{appendix:archive}
 
-Content of the attached archive:
+Archive contains APEX source code. Upstream version of the APEX can be found in
+the repository: \url{https://github.com/examon/APEX}
 
-TBA TBA TBA
+Please refer to the \mintinline{text}{README.md} for instructions about building
+and running APEX.
+
+Example source codes used in this thesis are included in the directory
+\mintinline{text}{examples}.
 
 
 % === APPENDIX: example.s ======================================================
