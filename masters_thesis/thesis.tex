@@ -872,23 +872,24 @@ the executable.
 \label{sec:design-components}
 
 % motivation
-Having shown in the previous section what are inter-instruction data
-dependencies and how important they are in relation to the code consistency.
+In the previous section, we defined the instruction data
+dependencies and we have shown how they can be used to preserve code consistency.
 However, they do not fully solve our problem of knowing when it is safe to
 remove instruction.
-Data dependencies between only two instructions do not reveal the whole picture.
-Since we have computed and stored graph of data dependencies, let us propose the
-idea of computing connected components of this graph.
+Data dependencies between only two instructions do not reveal the possible the
+chain of dependencies that may form between multiple instructions.
+To resolve this problem, we propose the idea of computing connected components
+of the data dependency graph.
 
 % definitions
+We define a \textbf{connected component} as an isolated subgraph, where
+each pair of vertices is connected by some path. For the computation, we
+treat this subgraph as it would have undirected edges.
 
-We define \textbf{connected component} as an isolated subgraph, where
-each pair of vertices is connected by some path.
+We use the \textbf{data dependency graph} computed in \autoref{sec:design-dep}
+and we find its connected components using the following algorithm:
 
-We use \textbf{data dependency graph} computed in the section
-\autoref{sec:design-dep} to find its connected components by using the following
-algorithm:
-
+TODO:algo
 \begin{minted}[label=finding components,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let G = data dependency graph
 1. Run |Breadth-first search \cite{clrs}| on G to visit each instruction
@@ -898,11 +899,11 @@ algorithm:
       Go to next instruction
 \end{minted}
 
-Running the above mentioned algorithm on the \textbf{data dependency graph}
-produces connected components for each function in the input.
-As an example, we present components for the \mintinline{text}{main} function
-in the \autoref{fig:connected_components_graph} (for the clarity, each component
-has its own color).
+We run the above mentioned algorithm separately on the \textbf{data dependency
+graph} of each function in the input.
+As an example, we present components for \mintinline{text}{main} function
+in \autoref{fig:connected_components_graph} (for clarity, each component
+is distinguished by its own color).
 
 \begin{figure}[ht]
     \centering
@@ -914,9 +915,8 @@ has its own color).
 \end{figure}
 
 % why having components is good
-
-Having instructions within each function separated into connected components
-comes useful especially because we can answer the question if some particular
+Splitting instructions of each function into separated connected components
+is useful especially because we can answer the question if some particular
 instruction is in data dependency relationship with multiple other instructions
 (instructions that form a data dependency path, etc.).
 
@@ -925,34 +925,30 @@ instruction is in data dependency relationship with multiple other instructions
 \label{sec:design-callgraph}
 
 %motivation
-
-In respect to the program execution flow, user provided the target and we know
-the source.
-In order to proceed further, it is needed to compute possible paths from
-source to target that could be used by the execution of the program.
-Computing and walking the call graph of the program can produce for us this
-piece of information.
+The next important part of our method is to compute feasable path from source
+to target that can be taken by the program exacution.
+In order to simplify this, we propose to compute a call graph.
 
 % definition
-
 A \textbf{call graph}\footnote{
 More technically, \emph{call multigraph} \cite{data_flow}.}
 is a control flow graph that represents relationship
-between program procedures in respect to control flow.\cite{data_flow}
-Having call graph $G = \{V, E\}$, set of vertices $V$ typically represents
-functions and set of edges $E$ represents transfer of control flow from one
-function to another.
+between program procedures\cite{data_flow}.
+Having call graph $G = \{V, E\}$, the set of vertices $V$ typically represents
+functions in the program and set of the edges $E$ represents the transfer of
+control flow from one function to another (i.e. a function call).
 
-In our context, call graph represents relationship between individual
+In our context, we use a slightly different call graph definition that better
+suits our needs.
+Our call graph represents a relationship between individual
 connected components (computed in the \autoref{sec:design-components})
-and functions that are being called from these components by one of its
-instructions. In other words, our call graph is a set of mappings from
-components to the function (or functions).
-
+and functions that are being called from these components (by one of their
+instructions).
+In other words, our call graph is a mapping from components to
+functions.
 
 % example
-
-We construct the call graph using the following algorithm:
+We construct edges in the call graph using the following algorithm:
 
 \begin{minted}[label=computing call graph,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let FS = set of functions in the code
@@ -961,18 +957,17 @@ We construct the call graph using the following algorithm:
       FOR EACH component C in the set CS(F):
          FOR EACH instruction I in the component C:
             IF instruction I is a call instruction to some function X:
-                Store information X gets called from the C
+                Add edge (C, X) to E.
 \end{minted}
 
 Running the presented algorithm on the \textbf{data dependence graph}
 of the \mintinline{text}{main} function that we computed earlier
-(\autoref{fig:connected_components_graph}) produce call graph structure
-shown in the \autoref{fig:call_graph}. We know that in the context of the
-\mintinline{text}{main} function, there are four distinct components.
-We can see from the computed call graph, that
-\mintinline{llvm}{i32 @foo(i32 %n)} is being called from the
-\emph{yellow} component, and
-\mintinline{llvm}{i32 @bar()} is being called from the \emph{red} component.
+(\autoref{fig:connected_components_graph}) produces a call graph structure
+shown in \autoref{fig:call_graph}.
+The \mintinline{text}{main} function contains four distinct components.
+We can see from the computed call graph, that \mintinline{llvm}{@foo} is being
+called from the \emph{yellow} component, and \mintinline{llvm}{@bar} is being
+called from the \emph{red} component.
 
 \begin{figure}[ht]
     \centering
@@ -984,58 +979,51 @@ We can see from the computed call graph, that
 
 
 % === SECTION: Finding Path ====================================================
-\section{Finding Path from Source to Target}
+\section{Finding Path from the Source to the Target}
 \label{sec:design-path}
 
 % motivation
-
-Having call graph represented in the structure shown in the
-\autoref{fig:call_graph} is beneficial for finding program execution flow path
-between specific components within the program in relation to their
-dependencies. We can find path from source to target and know which components
-this path contains.
+As we mentioned earlier, we use the call graph defined in the previous section
+for finding program path between the source and the target instructions.
 
 % definitions
 
 \emph{''A \textbf{path} is a simple graph whose vertices can be arranged in a linear sequence in
 such a way that two vertices are adjacent if they are consecutive in the sequence,
-and are nonadjacent otherwise.''}\cite{graph_theory} In our case, linear
-sequence of vertices consists of components computed in the
+and are nonadjacent otherwise.''}\cite{graph_theory} In our case, path is
+a linear sequence of vertices consists of components computed in
 \autoref{sec:design-components}.
 
 % method
+Since the connected components contain related instructions, it is sufficient
+for us to compute a path in our call graph.
 
-The reason why we constructed call graph in the previous chapter is now apparent.
-We want to find a path from source to the target and in doing so, know which
-connected components are part of this path or not.
-Potentially, there may exist infinite number of such paths. From
-the optimization standpoint, it would be fitting to find all (or at least as
-many as we can) paths and pick some path according to selected optimization
-criteria (shortest path, path with smallest connected components, etc.).
+Potentially, there may exist an infinite number of such paths.
+From the optimization standpoint, it would be fitting to find all paths if
+possible and pick some path according to some optimization criteria (shortest
+path, path with smallest connected components, etc.).
 However, for our purposes, it will be sufficient to find any path, because
 our method does not try to optimize final code in respect to size, speed, etc.
+One path may potentially not be enough because of branching. In order to cover
+every branch, method would have to be extended.
 
-We will use the following algorithm in order to find a path from source to target
-in the call graph:
-
-\begin{minted}[label=finding path,escapeinside=||,frame=lines,framesep=10pt]{text}
-0. Let G = call graph
-1. Run Breadth-first search on G to find path from source to target
-\end{minted}
+To find a path, we traverse the call graph using the standard Breadth-first
+search algorithm.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/main_path.pdf}
     \caption{Path from \textbf{source} to \textbf{target} computed on the
-    \autoref{fig:call_graph}. Components in the path are \emph{blue}.
+    \autoref{fig:call_graph}. Components belonging to the path are \emph{blue}.
     }
     \label{fig:path}
 \end{figure}
 
-Given the source and target, we can see from the \autoref{fig:path} that path
-only contains two components, one from \mintinline{text}{main} function and
-another from \mintinline{text}{bar}. These two components are going to be the
-core of the final, extracted program.
+Again, we illustrate the method at our running example in \autoref{fig:path}.
+We can see that the path only contains two components, one from the
+\mintinline{text}{main} function and another from the function
+\mintinline{text}{bar}.
+These two components will be the core of the final, extracted program.
 
 % === SECTION: Eliminating Dead Code ===========================================
 \section{Eliminating Dead Components and Functions}
@@ -2427,7 +2415,8 @@ Path finding procedure that we described in \autoref{sec:design-path} could be
 improved by finding multiple paths (not only one) and picking the best fitting
 one for the extraction. The best fitting path could be determined by some
 optimization criteria (e.g. shortest path, path without fewest external
-dependencies, etc.).
+dependencies, etc.). Finding multiple paths would also help with the branching
+coverage.
 
 Another very useful improvement would be to extend coverage of the dead
 code elimination procedure explained in \autoref{sec:design-removing}.
