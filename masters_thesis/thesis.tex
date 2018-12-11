@@ -175,14 +175,14 @@ willingness to always help.
 Thanks to Pavel Odvody for coming up with the thesis idea and for his
 valuable feedback.
 
-Big thanks go to my family, Alena, Ľudovít and Martin for their support
+A big thanks to my family, Alena, Ľudovít and Martin for their support
 during my studies.
 
 I would like to thank everybody that supported me in any shape or form on this
 journey. In no particular order: Majo, Jozef, Paťo, Mikasa, Astrix,
-Miša, Markéta, Tomáš, Janka, Hanka, Žofka, Vlastík, Mišo, Dominik, Stela, Ondra,
-Kristína, Grandma, Lukáš, Majky, Maroš, Palo and others that I forgot to
-mention. Thank you.
+Miša, Markéta, Tomáš, Marcel, Janka, Hanka, Žofka, Vlastík, Mišo, Dominik,
+Stela, Ondra, Kristína, Grandma, Lukáš, Majky, Maroš, Palo and others that I
+forgot to mention. Thank you.
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
@@ -1505,7 +1505,7 @@ if.end:                                           ; preds = %if.then, %entry
 \end{figure}
 
 % === CHAPTER: Implementation ==================================================
-\chapter{Implementation:}
+\chapter{Implementation}
 \label{chap:implementation}
 
 % === SECTION: APEXPass ========================================================
@@ -1719,12 +1719,10 @@ data dependencies which APEXPass requires.
 \subsection{Injecting Exit and Extract Functions}
 \label{sub:impl_inject}
 
-\textbf{TODO: examplain apex* functions and tell limitations}
-
 After having found the target instruction, we need to ensure that the execution
 of the extracted program stops right after the target has been reached.
-We do not want to execute program after it reached the target because it is
-contradictory of what our method should do.
+We do not want to execute program after it reached the target, because it is
+contradictory to what our method should do.
 We also want to extract value of the target and provide this information to the
 user.
 
@@ -1771,7 +1769,29 @@ Because these instructions call external functions, their definitions has to be
 linked to the program. This is done by the apex.py and is discussed in the
 \autoref{sec:impl_launcher}.
 
-%TODO: explain that extracting value is possible based on type
+Exit function \mintinline{text}{_apex_exit} and extract function
+\mintinline{text}{_apex_extract_int} are implemented in the library
+\mintinline{text}{apexlib.c}:
+
+\begin{minted}[label=apexlib.c,frame=lines,framesep=10pt,linenos]{C}
+#include <stdio.h>
+#include <stdlib.h>
+
+void _apex_exit(int exit_code) {
+  exit(exit_code);
+}
+
+void _apex_extract_int(int i) {
+  printf("%d", i);
+}
+\end{minted}
+
+Extraction is limited by the type of extracted value. By looking at the
+\mintinline{text}{example extracted final.s}, we can observe that the
+type of \mintinline{llvm}{%y} is \mintinline{llvm}{i32} (integer).
+We have to call extraction function that accepts argument of this type.
+Current implementation supports only extraction of values with the integer type
+(more specifically \mintinline{llvm}{i32}).
 
 
 % === SUB-SECTION: Stripping Debug Symbols =====================================
@@ -1894,14 +1914,19 @@ linked.ll is available for comparison with example.s in the
 
 We present four experiments in this chapter. The aim of the experiments is to
 test APEX on various inputs and determine if the implementation can handle
-basic programs.
+extracting parts from the basic programs. We perform extractions on various
+targets and evaluate the results.
+
+To demonstrate APEX capabilities, we perform tests on one artificially created
+program and three well know UNIX utilities.
 
 % === SECTION: example_mod2.c ==================================================
-\section{test.c}
+\section{\mintinline{text}{example_mod2.c}}
 \label{sec:exp_test}
 
-The first experiment will be conducted on the code example\_mod2.c, which we
-introduced in \autoref{subsec:path_branching}.
+The first experiment is conducted on the code example\_mod2.c, which we
+introduced in \autoref{subsec:path_branching}. We picked this simple code
+in order to demonstrate the whole process of testing APEX capabilities.
 
 \begin{minted}[label=example\_mod2.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
@@ -1929,75 +1954,89 @@ int main(void) {
 }
 \end{minted}
 
-We run -dot-callgraph pass via opt tool and dot with the following commands to generate call graph from the
-example\_mod2.bc (\autoref{fig:exp_img_mod2}):
+First, we compile example\_mod2.bc into the LLVM bitcode with debug
+information:
 
-\mintinline{text}{
+\mintinline{shell}{
+clang -c -g -emit-llvm example_mod2.c -o example_mod2.bc
+}
+
+We run -dot-callgraph pass via opt tool and dot with the following commands to
+generate call graph image from the example\_mod2.bc
+(\autoref{fig:exp_img_mod2}):
+
+\mintinline{shell}{
 opt -dot-callgraph example_mod2.bc && dot callgraph.dot -Tsvg -O
 }
 
-\autoref{fig:exp_img_mod2} serves as as reference for the subsequent stages of
-this experiment.
-
-% after linking
+% call graph before linking
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.75\textwidth]{images/experiments/mod2_linked.pdf}
+    \includegraphics[width=0.5\textwidth]{images/experiments/mod2.pdf}
     \caption{
     \mintinline{text}{example_mod2.c}
-    call graph after linking and before running APEXPass.
+    call graph before linking and running APEXPass.
     }
     \label{fig:exp_img_mod2}
 \end{figure}
 
+\autoref{fig:exp_img_mod2} serves as as reference for the subsequent stages of
+this experiment.
+Having compiled input with debug symbols successfully, we fulfilled
+requirements for APEX input and can therefore run apex.py to start extraction.
+
 % target 16
-\begin{minted}[frame=lines,framesep=10pt,breaklines]{shell}
-$ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 16
-$ ./extracted
+\begin{minted}[label=extraction with target line number 16, frame=lines,framesep=10pt,breaklines]{shell}
+> python apex.py example_mod2.bc example_mod2.c 16
+> ./extracted
 10
 \end{minted}
 
+APEX generated binary \mintinline{text}{extracted} with respect to the target
+at the line number 16. When executing extracted binary, we get value of the
+\mintinline{text}{some_int} via injected function
+\mintinline{text}{_apex_extract_int} (which is 10).
+Execution subsequently stops because
+\mintinline{text}{_apex_exit} is called. APEX also generated build/apex.bc
+file, which is the extracted program in the LLVM bitcode format. We can generate
+the call graph using the same method as we did with the example\_mod2.bc and
+get \autoref{fig:exp_img_mod2_target16}.
+
+% call graph after apex, target 16
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.75\textwidth]{images/experiments/mod2_target16.pdf}
     \caption{
-    \mintinline{text}{example_mod2.c}
-    call graph after extraction with target on line 16.
+    \mintinline{text}{example_mod2.c}: call graph after extraction with target
+    at the line 16.
     }
     \label{fig:exp_img_mod2_target16}
 \end{figure}
 
-% target 20
-\begin{minted}[frame=lines,framesep=10pt,breaklines]{shell}
-$ python apex.py examples/experiments/example_mod2/example_mod2.bc example_mod2.c 20
-$ ./extracted
-42
-\end{minted}
+We can see, that the generated call graph includes functions
+from apexlib, namely \mintinline{text}{_apex_exit} and
+\mintinline{text}{_apex_extract_int}.
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.75\textwidth]{images/experiments/mod2_target20.pdf}
-    \caption{
-    \mintinline{text}{example_mod2.c}
-    call graph after extraction with target on line 20.
-    }
-    \label{fig:exp_img_mod2_target20}
-\end{figure}
+When comparing \autoref{fig:exp_img_mod2} and
+\autoref{fig:exp_img_mod2_target16} we observe, that functions bar and qux are
+deleted. APEXPass determined that they do not need to be part of the final
+extracted executable and therefore dropped them from the code.
+
 
 
 % === SECTION: yes.c ===========================================================
-\section{yes.c}
+\section{\mintinline{text}{yes.c}}
 \label{sec:exp_yes}
 
-The following first experiment will be conducted on the classic UNIX utility
-called yes.
+The following experiment will be conducted on the classic UNIX utility called
+yes.
 yes repeatedly outputs a line with specified string or 'y' until
 killed.
 
-We will use source code from the simple open-source implementation of yes
+We use source code from the open-source implementation of yes
 from the following repository: \url{https://github.com/mubaris/yes}
 
-Full C source code that implements yes is shown in the following code:
+Full C source code that implements yes is shown in the yes.c listing:
 
 \begin{minted}[label=yes.c,frame=lines,framesep=10pt,linenos]{C}
 #include <stdio.h>
@@ -2042,90 +2081,300 @@ int main(int argc, char* argv[]) {
 }
 \end{minted}
 
-First we need to compile yes.c into the LLVM bitcode with clang:
+After compilation yes.c into the bitcode yes.bc, we pick
+\mintinline{C}{int needed_size} from line 17 as a target.
 
-\mintinline{text}{
-clang -g -c -emit-llvm yes.c -o yes.bc
-}
-
-Lets pick as a target line 17 from the if branch:
-:\mintinline{C}{
-int needed_size = 2 + strlen(argv[1]);
-}
-
-\begin{minted}[frame=lines,framesep=10pt]{shell}
-python apex.py examples/experiments/yes/yes.bc yes.c 17
-./extracted test
-> 6
-./extracted foobar
-> 8
-./extracted
+\begin{minted}[label=extraction with target line number 17, frame=lines,framesep=10pt]{shell}
+> python apex.py yes.bc yes.c 17
+> ./extracted foo
+5
+> ./extracted foobar
+8
+> ./extracted
 y
 y
 y
 ...
 \end{minted}
 
-We can see that the extracted program outputs the value of
-\mintinline{C}{needed_size} when we provide command line argument.
-It also correctly executes the branch else when we do not prove any command line
-argument.
+Extracted program correctly outputs the value of the
+\mintinline{C}{int needed_size} when we provide some command line argument.
+It also correctly executes the branch else when we do not provide any command
+line argument.
 
-When we pick target line 31: \mintinline{C}{output_len = strlen(output);}
-and run apex.py, we get the following output when executing extracted binary:
+Next, we pick line 31 as a target, which corresponds to the line
+\mintinline{C}{output_len = strlen(output);}.
+Running apex.py, we get the following output when executing extracted binary:
 
-\begin{minted}[frame=lines,framesep=10pt]{shell}
-python apex.py examples/experiments/yes/yes.bc yes.c 31
-./extracted test
-> 5
-./extracted foobar
-> 7
-./extracted
+\begin{minted}[label=extraction with target line number 31,frame=lines,framesep=10pt]{shell}
+> python apex.py yes.bc yes.c 31
+> ./extracted foo
+4
+> ./extracted foobar
+7
+> ./extracted
 y
 y
 y
 ...
 \end{minted}
 
-Lets test the else branch of the code by picking target line 34:
-\mintinline{C}{output_len = 2;}
+Finally, lets test the else branch of the yes.c by picking line 34 as a target:
+(\mintinline{C}{output_len = 2;}):
 
-\begin{minted}[frame=lines,framesep=10pt]{shell}
-python apex.py examples/experiments/yes/yes.bc yes.c 31
-./extracted test
-test
-test
-test
+\begin{minted}[label= extraction with target line number 34,frame=lines,framesep=10pt]{shell}
+> python apex.py yes.bc yes.c 34
+> ./extracted foo
+foo
+foo
+foo
 ...
-./extracted
-> 2
+> ./extracted
+2
 \end{minted}
 
-From the experimentation, we can conclude that APEX can handle inputs with the
-complexity of the yes.c
-
+From the performed experimentation, we can conclude that APEX can handle inputs
+with the complexity of the yes.c source code.
 
 % === SECTION: domainname.c=====================================================
-\section{domainname.c}
+\section{\mintinline{text}{domainname.c}}
 \label{sec:exp_domainname}
 
+Second UNIX utility that we use for testing is domainname, which is used
+for showing or setting the system's NIS/YP domain name.
+
+We use the following open-source implementation of domainname provided by the
+OpenBSD community:
 \url{https://raw.githubusercontent.com/openbsd/src/master/bin/domainname/domainname.c}
 
 
 \begin{minted}[label=domainname.c,frame=lines,framesep=10pt,linenos]{C}
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
 
+char *__progname;
+void usage(void);
+
+int
+main(int argc, char *argv[])
+{
+    int ch;
+    char domainname[HOST_NAME_MAX+1];
+
+    while ((ch = getopt(argc, argv, "")) != -1)
+        switch (ch) {
+        default:
+            usage();
+        }
+    argc -= optind;
+    argv += optind;
+
+    if (argc > 1)
+        usage();
+
+    if (*argv) {
+        if (setdomainname(*argv, strlen(*argv)))
+            err(1, "setdomainname");
+    } else {
+        if (getdomainname(domainname, sizeof(domainname)))
+            err(1, "getdomainname");
+        (void)printf("%s\n", domainname);
+    }
+    return(0);
+}
+
+
+void usage(void)
+{
+    (void)fprintf(stderr, "usage: %s [name-of-domain]\n", __progname);
+    exit(1);
+}
 \end{minted}
 
-% === SECTION: echo.c ==========================================================
-\section{echo.c}
-\label{sec:echo}
+Picking target \mintinline{C}{argc -= optind;} from line 22, we get the
+following results:
 
+\begin{minted}[label=extraction with target line number 22,frame=lines,framesep=10pt]{shell}
+python apex.py domainname.bc domainname.c 22
+> ./extracted
+0
+> ./extracted a b
+2
+> ./extracted a b c d
+4
+\end{minted}
 
+Interestingly, since we targeted \mintinline{C}{argc} variable, it looks like
+the extracted executable counts number of supplied command line arguments.
+
+% === SECTION: sleep.c =========================================================
+\section{\mintinline{text}{sleep.c}}
+\label{sec:sleep}
+
+Last UNIX utility that we test is sleep.
+This utility produces delay for a specified amount of time.
+
+We use the following open-source implementation of sleep provided by the
+OpenBSD community:
+\url{https://raw.githubusercontent.com/openbsd/src/master/bin/sleep/sleep.c}
+
+\begin{minted}[label=domainname.c,frame=lines,framesep=10pt,linenos]{C}
+#include <ctype.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <err.h>
+
+extern char *__progname;
+void usage(void);
+void alarmh(int);
+
+int
+main(int argc, char *argv[])
+{
+    int ch;
+    time_t secs = 0, t;
+    char *cp;
+    int nsecs = 0;
+    struct timespec rqtp;
+    int i;
+
+    signal(SIGALRM, alarmh);
+
+    while ((ch = getopt(argc, argv, "")) != -1)
+        switch(ch) {
+        default:
+            usage();
+    }
+    argc -= optind;
+    argv += optind;
+
+    if (argc != 1)
+        usage();
+
+    cp = *argv;
+    while ((*cp != '\0') && (*cp != '.')) {
+        if (!isdigit((unsigned char)*cp))
+            errx(1, "seconds is invalid: %s", *argv);
+        t = (secs * 10) + (*cp++ - '0');
+        if (t / 10 != secs)	/* oflow */
+            errx(1, "seconds is too large: %s", *argv);
+        secs = t;
+    }
+
+    /* Handle fractions of a second */
+    if (*cp == '.') {
+        cp++;
+        for (i = 100000000; i > 0; i /= 10) {
+            if (*cp == '\0')
+                break;
+            if (!isdigit((unsigned char)*cp))
+                errx(1, "seconds is invalid: %s", *argv);
+            nsecs += (*cp++ - '0') * i;
+        }
+
+        while (*cp != '\0') {
+            if (!isdigit((unsigned char)*cp++))
+                errx(1, "seconds is invalid: %s", *argv);
+        }
+    }
+
+    while (secs > 0 || nsecs > 0) {
+        if (secs > 100000000) {
+            rqtp.tv_sec = 100000000;
+            rqtp.tv_nsec = 0;
+        } else {
+            rqtp.tv_sec = secs;
+            rqtp.tv_nsec = nsecs;
+        }
+        if (nanosleep(&rqtp, NULL))
+            err(1, NULL);
+        secs -= rqtp.tv_sec;
+        nsecs -= rqtp.tv_nsec;
+    }
+    return (0);
+}
+
+void
+usage(void)
+{
+    (void)fprintf(stderr, "usage: %s seconds\n", __progname);
+    exit(1);
+}
+
+void
+alarmh(int signo)
+{
+    _exit(0);
+}
+\end{minted}
+
+By picking target \mintinline{text}{nsecs += (*cp++ - ’0’) * i;} at line 54, we
+get the following results:
+
+\begin{minted}[label=extraction with target line number 54,frame=lines,framesep=10pt]{shell}
+python apex.py sleep.bc sleep.c 54
+> ./extracted foo
+extracted: seconds is invalid: foo
+> ./extracted 3
+...
+(sleeps 3 seconds)
+...
+> ./extracted 3.14
+100000000
+> ./extracted
+Segmentation fault (core dumped)
+\end{minted}
+
+Running extracted with string or integer argument produces the expected
+behavior (error and sleeping).
+When running extracted executable with command line argument encompassing
+decimal point, the execution hits our target at the line 54. Value of the
+\mintinline{C}{nsecs} is extracted via \mintinline{text}{_apex_extract_int}
+function and printed as expected.
+
+The interesting thing happens when we run extracted binary without any
+command line arguments.
+If we look into sleep.c, we can see that in the case where there are no command
+line arguments, usage function should be called.
+However, because we have picked target at the line 54, APEXPass determined that
+it is safe to remove function usage from the code (which is the case when we
+run binary with command line arguments).
+
+If we compare call graphs \autoref{fig:exp_img_sleep} and
+\autoref{fig:exp_img_sleep_target54}, we can see that the function usage has
+been removed and is no longer part of the extracted binary.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\textwidth]{images/experiments/sleep.pdf}
+    \caption{
+    \mintinline{text}{sleep.c}
+    call graph before linking and running APEXPass.
+    }
+    \label{fig:exp_img_sleep}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\textwidth]{images/experiments/sleep_target54.pdf}
+    \caption{
+    \mintinline{text}{sleep.c}
+    call graph after extraction with target at the line 54.
+    }
+    \label{fig:exp_img_sleep_target54}
+\end{figure}
 
 
 
 % === CHAPTER: Conclusions =====================================================
-\chapter{Conclusions: TODO}
+\chapter{Conclusions}
 \label{chap:conclusions}
 
 % === SECTION ===
@@ -2138,6 +2387,15 @@ complexity of the yes.c
 % === SECTION ===
 \section{Further Research and Development}
 \label{sec:conclusions-next}
+
+
+As we mentioned in the \autoref{sub:impl_inject}, extraction is currently limited
+by the type of the extracted value.
+Possible improvement of the extraction procedure would be to implement
+extraction functions for every IR type.
+
+and write algorithm that would determine
+what kind of extraction function would be injected into to code.
 
 % what could be improved theoretically? (e.g. multiple paths, etc.)
 % what could be improved technically? (e.g. better json dump)
