@@ -1042,23 +1042,24 @@ core of the final, extracted program.
 \label{sec:design-removing}
 
 % motivation
-
-This section is the last step that the method performs.
-Components and functions that are dead are indentified and removed from the code
-and therefore, they will not be part of the final, extracted executable.
+The final step of our method is extraction of the desired parts of code.
+We do this by eliminating so-called dead components and functions.
 
 % definition
-Element of the code marked as \textbf{dead} is defined as such,
-that it can be safely deleted without compromising integrity of the code.
+An element of the code is defined as \textbf{dead} if and only if its removal
+does not break reachability of target from source and integrity of the code.
+
 In other words, we can safely remove dead elements from the code without being
-worried that the execution starting from the source will not reach target.
+worried that the remaining code cannot be compiled and that the execution
+starting from source will not reach target.
 
-Having successfully found path from source to target in the last section,
-we know that each component that is part of the path cannot be marked as dead.
-Therefore, components outside of path have to be explored and the decision
-found whether they can be marked as dead and removed or not.
+In the previous section, we described how to find a path from source to target.
+Since this path should be perserved, each component that is a part of the path
+cannot be marked as dead.
+Therefore, components outside of the path have to be explored and the decision
+must be made whether they can be marked as dead or not.
 
-We can use the following basic algorithm for finding and eliminating dead
+We  use the following basic algorithm for finding and eliminating dead
 components:
 
 \begin{minted}[label=eliminating dead components,escapeinside=||,frame=lines,framesep=10pt]{text}
@@ -1074,21 +1075,21 @@ components:
 % example
 
 After applying the presented algorithm for eliminating dead components on the
-code from \mintinline{text}{example.s} we get the result that is visualised
-in the \autoref{fig:removing_prepare}.
-We can see components marked as dead are colored \emph{red} because they are not
-part of the path.
+code from \mintinline{text}{example.s} we get the result that is shown
+in \autoref{fig:removing_prepare}.
+Components marked as dead are colored \emph{red} because they are not
+a part of the path.
 The \emph{yellow} component with the single instruction stands out.
 This component is not marked as dead and will not be removed because it contains
-terminator instruction \mintinline{llvm}{ret i32 0}.\footnote{
+a terminator instruction \mintinline{llvm}{ret i32 0}.\footnote{
 \url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
 More about terminators and why they need special treatment in the
 \autoref{chap:implementation}.
 }
 Finally, all components marked as dead are removed and we are left with the
-code that we presented in the \autoref{sec:method_example}
+code that we presented in \autoref{sec:method_example}
 (\mintinline{text}{example_extracted.s}).
-Contents of the \mintinline{text}{example_extracted.s} are visualized in the
+Call graph of the \mintinline{text}{example_extracted.s} is visualized in
 \autoref{fig:removing_done}.
 
 \begin{figure}[ht]
@@ -1097,8 +1098,8 @@ Contents of the \mintinline{text}{example_extracted.s} are visualized in the
     \caption{
     \mintinline{text}{example.s}:
     Components selected for removal are marked \emph{red}.
-    \emph{Yellow} component is not marked for removal, because it contains
-    terminator.
+    \emph{Yellow} component is not marked for removal, because it contains a
+    terminator instruction.
     }
     \label{fig:removing_prepare}
 \end{figure}
@@ -1116,23 +1117,50 @@ Contents of the \mintinline{text}{example_extracted.s} are visualized in the
 
 % conclusion
 
-Unfortunately, the basic algorithm presented above works correctly only with the
-non-complex inputs that are similar to the \mintinline{text}{example.s}.
-We present two extensions of the \mintinline{text}{example.s} program in the
-\autoref{subsec:path_function} and \autoref{subsec:path_branching}
-along with the improvements of the basic algorithm that cover these two
-extensions.
+Unfortunately, the basic algorithm presented above only works correctly with
+non-complex inputs such as the one in \mintinline{text}{example.s}.
 
+We present two extensions of the \mintinline{text}{example.s} program along with
+improvements of the basic algorithm that help to handle these extensions.
+
+\clearpage
 
 % === SUB-SECTION: External Function ===========================================
 \subsection{Path Depending on the External Function}
 \label{subsec:path_function}
 
-We modify the \mintinline{text}{example.c} by introducing new function
+The first problem is that there may exist a function that is not part of the
+path but that is called by one instruction on the path.
+In such case, when looking upon \autoref{fig:mod1_prepare}, we see that
+function bar calls function qux, but qux is not part of the computed path (only
+components with the blue color are part of the path, that is one component from
+main and one from foo).
+This is problematic for the basic algorithm that we introduced in the
+\autoref{sec:design-removing}.
+This basic algorithm would mark qux as dead and subsequently remove this
+function. However, this would break code integrity, because function qux has to
+be called in order for the execution to correctly proceed.
+Therefore, we propose modified algorithm for eliminating dead components that
+will take into the account the above described possibility.
+
+\begin{minted}[label=eliminating dead components - mod1,escapeinside=||,frame=lines,framesep=10pt]{text}
+0. Let CS = set of all components in the code
+1. Let PATH = set of components on the path from source to target
+2. Recursively find all called functions that originate from PATH
+   using Breath-first search and add them to the PATH.
+3. FOR EACH component C in set CS:
+      IF component C is not in the set PATH:
+         IF component C does not contain terminator:
+             Mark component C as DEAD
+4. Remove all components marked as DEAD
+\end{minted}
+
+
+We modify the \mintinline{text}{example.c} by introducing a new function
 \mintinline{C}{int qux(void)}. Also, we change line 7 of the
 \mintinline{text}{example.c} from
-\mintinline{C}{int y = 42} to \mintinline{C}{int y = qux()} and save these
-modifications to the \mintinline{text}{example_mod1.c}:
+\mintinline{C}{int y = 42} to \mintinline{C}{int y = qux()}, the resulting code
+is shown in \mintinline{text}{example_mod1.c}:
 
 % mod1 C code
 \begin{minted}[label=example\_mod1.c,frame=lines,framesep=10pt,linenos]{C}
@@ -1159,47 +1187,21 @@ int main(void) {
 }
 \end{minted}
 
-Target is the same (\mintinline{C}{int y = ...})
-as in the original example from the
-\autoref{sec:method_example} (line 7 in the \mintinline{text}{example.c}).
-In the \mintinline{text}{example_mod1.c}, target sits at the line 11.
+Target stays the same line as in the original example from
+\autoref{sec:method_example}.
+In the \mintinline{text}{example_mod1.c} this corresponds to line 11.
 
-\mintinline{text}{example_mod1.c} compiled into the LLVM IR
-is stored in the \mintinline{text}{example_mod1.s}.
-Accordingly, the call graph with computed components and path for the
-\mintinline{text}{example_mod1.s} can be seen in the
-\autoref{fig:mod1_prepare}.
+The LLVM IR of \mintinline{text}{example_mod1.c} is shown in
+\mintinline{text}{example_mod1.s} and its call graph with computed components
+and path can be seen in \autoref{fig:mod1_prepare}.
 
-When looking upon \autoref{fig:mod1_prepare}, we see that function bar calls
-function qux, but qux is not part of the computed path (only components with
-the blue color are part of the path, that is one component from main and one
-from foo). This is problematic for the basic algorithm that we introduced
-in the \autoref{sec:design-removing}. This basic algorithm would mark
-qux as dead and subsequently remove this function. However, this would break
-code integrity, because function qux has to be called in order for the execution
-to correctly proceed.
-Therefore, we propose modified algorithm for eliminating dead components that
-will take into the account the above described possibility.
-
-\begin{minted}[label=eliminating dead components - mod1,escapeinside=||,frame=lines,framesep=10pt]{text}
-0. Let CS = set of all components in the code
-1. Let PATH = set of components on the path from source to target
-2. Recursively find all called functions that originate from PATH
-   using Breath-first search and add them to the PATH.
-3. FOR EACH component C in set CS:
-      IF component C is not in the set PATH:
-         IF component C does not contain terminator:
-             Mark component C as DEAD
-4. Remove all components marked as DEAD
-\end{minted}
-
-By using the above described algorithm instead of the basic one from the
-\autoref{sec:design-removing}, the path will contain function qux and therefore,
-function qux will not be marked as dead and removed.
-We can see the result of the algorithm in the \autoref{fig:mod1_done} with the
-corresponding code in the \mintinline{text}{example_mod1_extracted.s}.
-Function qux has not been removed which mean that the integrity of the code
-was maintained and executable could be successfully produced.
+By using the above described algorithm instead of the basic one from
+\autoref{sec:design-removing}, the path will contain the function qux and
+therefore, the function qux will not be marked as dead and removed.
+We can see the result of the algorithm in \autoref{fig:mod1_done} with the
+corresponding code in \mintinline{text}{example_mod1_extracted.s}.
+The function qux has not been removed which means that the integrity of the code
+was perserved and an executable could be successfully produced.
 
 % mod1 IR
 \begin{minted}[label=example\_mod1.s,frame=lines,framesep=10pt,linenos]{llvm}
@@ -1246,20 +1248,6 @@ entry:
 }
 \end{minted}
 
-% mod1 callgraph
-\begin{figure}[ht]
-    \centering
-    \includegraphics[]{images/example_mod1/example_mod1_removing_prepare.pdf}
-    \caption{
-    \mintinline{text}{example_mod1.s}:
-    Components selected for removal are marked \emph{red}.
-    \emph{Yellow} component is not marked for removal, because it contains
-    terminator. \emph{Green} component was discovered by the modified algorithm
-    and has been added to the path and therefore will not be removed.
-    }
-    \label{fig:mod1_prepare}
-\end{figure}
-
 % mod1 extracted
 \begin{minted}[label=example\_mod1\_extracted.s,frame=lines,framesep=10pt,linenos]{llvm}
 define i32 @qux() #0 {
@@ -1285,7 +1273,23 @@ entry:
 }
 \end{minted}
 
-% mod1 extracted grwaph
+% mod1 callgraph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod1/example_mod1_removing_prepare.pdf}
+    \caption{
+    \mintinline{text}{example_mod1.s}:
+    Components selected for removal are marked \emph{red}.
+    \emph{Yellow} component is not marked for removal, because it contains
+    terminator. \emph{Green} component was discovered by the modified algorithm
+    and has been added to the path and therefore will not be removed.
+    }
+    \label{fig:mod1_prepare}
+\end{figure}
+
+\clearpage
+
+% mod1 extracted
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/example_mod1/example_mod1_removing_done.pdf}
@@ -1299,18 +1303,20 @@ entry:
 
 
 % === SUB-SECTION: Branching Instruction =======================================
-\subsection{Path Depending on the Branching Instruction}
+\subsection{Path Depending on a Branching Instruction}
 \label{subsec:path_branching}
 
-To increase input complexity, lets take \mintinline{text}{example_mod1.c} and
-add branching inside main function as shown in the
+Another problem comes with usage of branching instructions.
+
+We now introduce branching into the main function of our exampleas shown in
 \mintinline{text}{example_mod2.c}.
-After taking look at the generated LLVM IR shown in the
-\mintinline{text}{example_mod2.s}, we can see branch instruction
-at the line 42.
-Also, there are present two new basic blocks that this branch instruction
+The corresponding LLVM IR is shown in the
+\mintinline{text}{example_mod2.s}, the branch instruction
+occurs at line 42.
+Also, there appear two new basic blocks that this branch instruction
 refers to:
-\mintinline{text}{if.then} and \mintinline{text}{if.end} (lines 44 and 49).
+\mintinline{text}{if.then} and \mintinline{text}{if.end} (lines 44 and 49,
+respectively).
 
 If we take a closer look at the generated call graph for
 \mintinline{text}{example_mod2.s}
@@ -1323,7 +1329,7 @@ we can clearly see, that in order to get to the target (line 11),
 branching needs to be executed and thus included in the path.
 We present the algorithm from the previous subsection
 (\autoref{subsec:path_function}) with the extension that handles the above
-described scenario.
+described scenario:
 
 \begin{minted}[label=eliminating dead components - mod2,breaklines,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let CS = set of all components in the code
@@ -1344,17 +1350,23 @@ described scenario.
 As we can see in the
 \mintinline{text}{example_mod2.s}, if we examine instruction from the line 45,
 we can see that it belongs to the basic block
-\mintinline{text}{if.then}. This \mintinline{text}{if.then} basic block is
-handled by the branch instruction from the line 42. Therefore, algorithm will
-find component that contains this branch instruction and adds it to the path.
-The call graph with computed components and path that the algorithm takes as
-an input is shown in the \autoref{fig:mod2_prepare}.
-Component in the main function marked as green contains branching instruction
-that the algorithm identified as needed and therefore added to the path.
+\mintinline{text}{if.then}.
 
-The result of the algorithm are presented in the
-\mintinline{text}{example_mod2_extracted.s} and visually in the
-\autoref{fig:mod2_done}.
+The call graph for the new program is shown in the \autoref{fig:mod2_prepare}.
+We can observe that the instruction from line 45 lies on the path and at the
+same time belongs to the basic block \mintinline{text}{if.then}.
+This basic block is handled by the branch instruction from line 42.
+The modified algorithm
+finds a component that contains this branch instruction and adds it to the path.
+The call graph with the computed components and the path that the algorithm
+takes as the input is shown in \autoref{fig:mod2_prepare}.
+The component in the main function marked as green contains a branching
+instruction that the algorithm identified as necessary and therefore is was
+added to the path.
+
+The result of the algorithm is presented in
+\mintinline{text}{example_mod2_extracted.s} and visually in the form of a call
+graph \autoref{fig:mod2_done}.
 
 
 % mod2 C code
@@ -1440,20 +1452,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 \end{minted}
 
-% mod2 callgraph
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[]{images/example_mod2/example_mod2_removing_prepare.pdf}
-    \caption{
-    \mintinline{text}{example_mod2.s}:
-    Components selected for removal are marked \emph{red}.
-    \emph{Yellow} component is not marked for removal, because it contains
-    terminator. \emph{Green} components were discovered by the modified
-    algorithm and were added to the path and therefore will not be removed.
-    }
-    \label{fig:mod2_prepare}
-\end{figure}
 
 % mod2 extracted
 
@@ -1492,7 +1491,6 @@ if.end:                                           ; preds = %if.then, %entry
 \end{minted}
 
 % mod2 extracted graph
-
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/example_mod2/example_mod2_removing_done.pdf}
@@ -1503,6 +1501,23 @@ if.end:                                           ; preds = %if.then, %entry
     }
     \label{fig:mod2_done}
 \end{figure}
+
+% mod2 callgraph
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/example_mod2/example_mod2_removing_prepare.pdf}
+    \caption{
+    \mintinline{text}{example_mod2.s}:
+    Components selected for removal are marked \emph{red}.
+    \emph{Yellow} component is not marked for removal, because it a contains
+    terminator instruction.
+    \emph{Green} components were discovered by the modified
+    algorithm and were added to the path and therefore will not be removed.
+    }
+    \label{fig:mod2_prepare}
+\end{figure}
+
+
 
 % === CHAPTER: Implementation ==================================================
 \chapter{Implementation}
