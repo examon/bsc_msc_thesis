@@ -157,10 +157,10 @@
 
 % zadanie a prehlasenie
 % TODO: Comment this for the electronic version!
-\includepdf[pages=-]{blank.pdf}
-\includepdf[pages=-]{zadanie.pdf}
-\includepdf[pages=-]{blank.pdf}
-\includepdf[pages=-]{prehlasenie.pdf}
+%\includepdf[pages=-]{blank.pdf}
+%\includepdf[pages=-]{zadanie.pdf}
+%\includepdf[pages=-]{blank.pdf}
+%\includepdf[pages=-]{prehlasenie.pdf}
 
 \begin{ThesisDeclaration}
     \DeclarationText
@@ -551,59 +551,43 @@ entry:
 \chapter{Extracting Program Subsets}
 \label{chap:design}
 
-In this chapter, we introduce the method for extracting parts of programs
-from the provided user input.
+In this chapter, we introduce a method for extracting chosen parts of programs
+into separate executable binaries.
 
-Starting with the method overview in the \autoref{sec:method_overview} where we
-define what is the user input and briefly outline the method itself, what it
-does and what are the steps for achieving the final result.
+First, we start with the method overview in \autoref{sec:method_overview},
+where we define what the method input is and briefly outline the method itself
+- what it does and what are the steps for achieving the final result.
 
-We follow with the example of the method from the user perspective in the
-\autoref{sec:method_example}.
+Next, we follow with an example of the method execution from the user
+perspective in \autoref{sec:method_example}.
 
-After example, we present in detail each major step that is followed.
-Starting with computing data dependencies graph
-(\autoref{sec:design-dep}).
-Following with the procedure for finding connected components in the computed
-data dependencies graph (\autoref{sec:design-components}).
-Next follows introduction of the call graph (\autoref{sec:design-callgraph}) and
-subsequently procedure for finding path from source to target in it
-(\autoref{sec:design-path}).
-The chapter ends with the section describing methods on eliminating dead
-components and functions from the code (\autoref{sec:design-removing}).
-
+In the rest of the chapter, we present in detail each major step of the method.
 
 % ===== SECTION: Method Overview ===============================================
 \section{Method Overview}
 \label{sec:method_overview}
 
 % method input definition
-Mandatory \textbf{input} for the method is a touple with the following
-definition:
+The input of the proposed method consists of two main parts:
 
-$$
-input \equiv (code, target)
-$$
-
-where:
 \begin{myItemize}
-\item \textbf{code} is a C program source code compiled into the llvm bitcode.
-\item \textbf{target} is an integer value representing line of code from the
-C program source code.
+\item \textbf{code}: A C program compiled into the LLMV bitcode.
+\item \textbf{target}: An integer value representing a line of code from the
+original C program.
 \end{myItemize}
 
-We also define \textbf{source} as an entry to the C program
-(\mintinline{text}{main} function).
+We also define \textbf{source} to be an entry to the code
+(the \mintinline{text}{main} function).
 
 % what the method does
 
-The method determines what parts of the \emph{input} to extract according to
-the \emph{source} and \emph{target}.
-Procedure subsequently calculates possible execution path up to the
-\emph{target} and extracts this execution path into the separate, functioning
+The method determines what parts of the code to extract according to
+the \emph{source} and the \emph{target}.
+The procedure calculates a possible program path from the \emph{source} to the
+\emph{target} and extracts this program path into a separate, functioning
 executable.
 
-Barring implementation specific details (which are discussed in the
+Barring implementation specific details (which are discussed in
 \autoref{chap:implementation}), the method can be summarized by the following
 five steps:
 
@@ -611,31 +595,28 @@ five steps:
 \item Compute data dependencies between instructions.
 \item Find connected components in the computed data dependencies inside
 every function.
-\item Construct call graph, mapping between connected components and functions
+\item Construct a call graph - a mapping between connected components and functions
 that are being called from these components.
-\item Find path from source to target in the call graph.
+\item Find a path from the source to the target in the call graph.
 \item Eliminate dead components and functions that do not depend on the path.
 \end{myEnumerate}
 
 % what is the result of the method
-Upon completion of the steps mentioned above, the llvm bitcode is produced as
-an \emph{output}.
-We can define \textbf{output} as the extracted part of the original program
-according to the \emph{source} and \emph{target} while keeping the consistency
-of the code intact.
-By \textbf{consistency}, we mean that the \emph{output} code is in a such state
-that it was possible to be compiled.
-\emph{Output} is expected to be runnable the same way as
-the original.
-\textbf{**TODO? explain more here or in another chapter what it means for IR to
-be compiled without problems?**}
+After the completion of the steps mentioned above, we denote the produced LLVM
+bitcode as \emph{output}.
+This is defined as a part of the original program containing a path from the
+source to the target that is consistent (i.e. that can be compiled
+independently).
+Moreover, we expect the output to be executed the same way as the original.
+
 
 % === SECTION: Method Example ==================================================
 \section{Example}
 \label{sec:method_example}
 
-User provided us with the \emph{input} in the form of the following
-C program source code that is stored in the file \mintinline{text}{example.c}:
+To better illustrate the explained methods, we give a running example.
+Let the code be the following C program shown in the
+\mintinline{text}{example.c}:
 
 \begin{minted}[label=example.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
@@ -656,10 +637,11 @@ int main(void) {
 }
 \end{minted}
 
+Next, let the input target be the line 7.
+We define source to be the start of the main function.
 Since our method does not work directly with the C source code but instead
-works with the LLVM Intermediate Representation (IR), lets use clang and emit
-IR from the presented C source code in order to demonstrate the procedure more
-clearly:
+works with the LLVM Intermediate Representation (IR), use clang compiler to
+translate the C code into IR.
 \footnote {
 Flag \mintinline{text}{-S} tells clang to only run preprocess and
 compilation steps, while \mintinline{text}{-emit-llvm} makes sure to use the LLVM
@@ -672,10 +654,9 @@ various clang flags, visit
   clang -S -emit-llvm example.c -o example.s
 \end{minted}
 
-Emitted LLVM IR is stored in the file \mintinline{text}{example.s} and
-has the following structure:\footnote{
+The emitted LLVM IR is shown in \mintinline{text}{example.s}:\footnote{
 Strictly speaking, this is not exactly the IR code that would be emitted by the
-clang. We have stripped it out of the module info and comments to make it more
+clang. We have stripped out the module info and the comments to make it more
 readable. To see the unmodified \mintinline{text}{example.s}, please go to the
 \autoref{appendix:example}.
 }
@@ -719,19 +700,16 @@ entry:
 \end{minted}
 
 % next point
-User also provided the line number \textbf{7} from the
-\mintinline{text}{example.c} as the target, which corresponds to the line
-\textbf{16} from the \mintinline{text}{example.s}. Source is the main function.
+The target line number \textbf{7} from the \mintinline{text}{example.c}
+corresponds to the line \textbf{16} from the \mintinline{text}{example.s}.
 
-Procedure for finding mapping between C code referenced by the user input and
-its analogous IR instruction is implementation detail and is be described
-in the \autoref{chap:implementation}.
+The procedure for finding mapping between C a code line and its analogous IR
+instruction is described in \autoref{chap:implementation}.
 
 % next point
-When we apply the method on the contents of the
-\mintinline{text}{example.s} with respect to the source and target,
-we get the result stored in the file
-\mintinline{text}{example_extracted.s} with the following code:
+When we apply the proposed method on the program in
+\mintinline{text}{example.s} with respect to the source and the given target,
+we get output as shown in \mintinline{text}{example_extracted.s}:
 
 \begin{minted}[label=example\_extracted.s,frame=lines,framesep=10pt]{llvm}
 define i32 @bar() #0 {
@@ -750,19 +728,15 @@ entry:
 }
 \end{minted}
 
-As we can see from the \mintinline{text}{example.c}, execution path from
-the program entry in the \mintinline{text}{main} function (which we will
-call \textbf{source}) to the \textbf{target} does not include function
-\mintinline{text}{foo} and its associated instructions, they can be removed.
-We are left only with function \mintinline{text}{bar} which contains target,
-and necessary instructions in the function \mintinline{text}{main} along with
-the \mintinline{text}{main} itself.
-\\
-\\
-We can now take \mintinline{text}{example_extracted.s} and recompile it back
-into the functioning executable.\footnote{
-More about recompilation in the \autoref{chap:implementation}.
-}
+As we can see from the \mintinline{text}{example.c}, the execution path from
+the program entry to the \textbf{target} does not include the function
+\mintinline{text}{foo} and its associated instructions.
+We are left only with the function \mintinline{text}{bar} which contains
+target and the necessary instructions in the function \mintinline{text}{main}.
+
+The source given in \mintinline{text}{example_extracted.s} can be recompiled
+back into a functioning executable. This process is described in
+\autoref{chap:implementation}.
 
 
 % === SECTION: Computing Data Dependencies =====================================
@@ -770,34 +744,28 @@ More about recompilation in the \autoref{chap:implementation}.
 \label{sec:design-dep}
 
 % motivation
-In order to identify what parts of the IR we can afford to remove, it is
-imperative to compute dependencies between instructions.
-When removing instructions, we need to preserve consistency of the remaining
-code so that it can be later compiled into a functional executable.
-To ensure this, we first compute dependencies among instructions.
+In order to identify what parts of the IR are safe to be removed, it is
+essential to compute dependencies between instructions.
+This helps us to preserve consistency of the remaining code so that it can be
+later compiled into a functional executable.
 
 % definitions
-We recognize two types of dependencies between IR instructions: control and data
-dependencies.
-The following terminology and procedures for computing dependencies that we use
-are due to the Marek Chalupa master's thesis \textit{Slicing of LLVM Bitcode}
-\cite{dg}.
+We recognize two types of dependencies between IR instructions: control and
+data dependencies.  The following terminology and procedures for computing
+dependencies that we use are taken from the Marek Chalupa Master's thesis
+\textit{Slicing of LLVM Bitcode} \cite{dg}.
 
 \begin{myItemize}
-\item ``\textbf{Control dependence} explicitly states what nodes are
-controlled by which predicate.``
-\item ``A \textbf{data dependence} edge is between nodes n and
-m iff n defines a variable that m uses and there is no intervening definition
-of that variable on some path between n and m. In other words, the definitions
-from n reach uses in m.``
+\item \textbf{Control dependence} describes what nodes are controlled by which predicate.
+\item \textbf{Data dependence} between nodes $A$ and $B$ exists if definitions
+from $A$ reach uses in $B$.
 \end{myItemize}
 
 % method
-The crucial information comes from data dependencies. We need to make sure that
-the IR integrity will remain intact after we are done with removing IR
-instructions.
+From the perspective of our method, the important information comes from data
+dependencies.
 
-The following example demonstrates data dependencies for the
+The following example demonstrates how data dependencies are used for the
 previously presented \mintinline{text}{example.c} source code.
 Taking closer look specifically at the function \mintinline{text}{main}:
 
@@ -819,11 +787,10 @@ entry:
 }
 \end{minted}
 
-Taking \mintinline{text}{main} code, we can construct graph G where V is set
-of vertices (in our case vertex is instruction) and E is set of edges (in our
-case, edge between vertices V1 and V2 represents data dependency between
-instruction V1 and V2).
-In order to compute data dependencies, we use \mintinline{text}{dg} library.
+$V$ is a set of vertices that correspond to instructions and E is a set of
+edges that correspond to data depdencies between instructions.
+
+In order to compute the data dependency graph, we use the \mintinline{text}{dg} library.
 \cite{dg}
 \footnote{
 For more info please visit \url{https://github.com/mchalupa/dg} \cite{dg}.
@@ -833,7 +800,7 @@ We will take a closer look at \mintinline{text}{dg} in the
 
 Computed \textbf{data dependency graph} for instructions from the function
 \mintinline{text}{main} is presented in the \autoref{fig:data_deps_graph}.
-This graph is stored and used in the next step of the method for finding
+This graph is used in the next step of the method for finding
 connected components (\autoref{sec:design-components}).
 
 \begin{figure}[ht]
@@ -843,10 +810,10 @@ connected components (\autoref{sec:design-components}).
     \label{fig:data_deps_graph}
 \end{figure}
 
-Taking a closer look at the instruction:
-\mintinline{llvm}{%some_int = alloca i32, align 4}.
-We see that the following instructions have data dependency on the
-\mintinline{llvm}{%some_int}
+To illustrate how the graph can be used, we take a closer look at the
+instruction: \mintinline{llvm}{%some_int = alloca i32, align 4}.
+We can see that the following instructions have data dependency on the
+\mintinline{llvm}{%some_int}:
 
 \begin{minted}[frame=lines,framesep=10pt, escapeinside=||]{llvm}
   store i32 10, i32* %some_int, align 4
@@ -854,18 +821,16 @@ We see that the following instructions have data dependency on the
 \end{minted}
 
 It is apparent that both instructions need \mintinline{llvm}{%some_int} for
-their operand. If we removed
-\mintinline{llvm}{%some_int = alloca i32, align 4}
-without taking into consideration that there are two
-instructions that depend on it, we would get into inconsistent state and two
-dependent instructions would contain undefined values as their operand.\footnote{
-More about undefined values at
+their operand.
+If we removed \mintinline{llvm}{%some_int = alloca i32, align 4} without taking
+into consideration that there are two instructions that depend on it, we would
+get into inconsistent state where two instructions would contain
+undefined values as their operand.\footnote{ More about undefined values at
 \url{https://llvm.org/docs/LangRef.html\#undefined-values},
 \url{https://llvm.org/docs/FAQ.html\#what-is-this-undef-thing-that-shows-up-in-my-code},
-\url{https://llvm.org/doxygen/classllvm_1_1UndefValue.html}
-}
+\url{https://llvm.org/doxygen/classllvm_1_1UndefValue.html} }
 This would lead into unsuccessful recompilation of the modified code back into
-the executable.
+an executable.
 
 % === SECTION: Finding Connected Components ====================================
 \section{Finding Connected Components}
@@ -889,14 +854,14 @@ treat this subgraph as it would have undirected edges.
 We use the \textbf{data dependency graph} computed in \autoref{sec:design-dep}
 and we find its connected components using the following algorithm:
 
-TODO:algo
-\begin{minted}[label=finding components,escapeinside=||,frame=lines,framesep=10pt]{text}
-0. Let G = data dependency graph
-1. Run |Breadth-first search \cite{clrs}| on G to visit each instruction
-2. IF instruction not in any component:
-      Create new component and put instruction inside
-   ELSE:
-      Go to next instruction
+\begin{minted}[label=finding components,escapeinside=||,frame=lines,breaklines,framesep=10pt]{text}
+0. Let G(F) = data dependency graph for function F
+1. Let SF = set of all functions in code
+2. FOR EACH function F in SF:
+       FOR EACH instruction I in F:
+           Run Breadth-first search on G(F), starting from I:
+               Add all reachable/visited instruction to the component, unless
+               they are already in some other component.
 \end{minted}
 
 We run the above mentioned algorithm separately on the \textbf{data dependency
@@ -925,8 +890,8 @@ instruction is in data dependency relationship with multiple other instructions
 \label{sec:design-callgraph}
 
 %motivation
-The next important part of our method is to compute feasable path from source
-to target that can be taken by the program exacution.
+The next important part of our method is to compute feasible path from source
+to target that can be taken by the program execution.
 In order to simplify this, we propose to compute a call graph.
 
 % definition
@@ -1042,7 +1007,7 @@ worried that the remaining code cannot be compiled and that the execution
 starting from source will not reach target.
 
 In the previous section, we described how to find a path from source to target.
-Since this path should be perserved, each component that is a part of the path
+Since this path should be preserved, each component that is a part of the path
 cannot be marked as dead.
 Therefore, components outside of the path have to be explored and the decision
 must be made whether they can be marked as dead or not.
@@ -1189,7 +1154,7 @@ therefore, the function qux will not be marked as dead and removed.
 We can see the result of the algorithm in \autoref{fig:mod1_done} with the
 corresponding code in \mintinline{text}{example_mod1_extracted.s}.
 The function qux has not been removed which means that the integrity of the code
-was perserved and an executable could be successfully produced.
+was preserved and an executable could be successfully produced.
 
 % mod1 IR
 \begin{minted}[label=example\_mod1.s,frame=lines,framesep=10pt,linenos]{llvm}
@@ -1608,9 +1573,9 @@ The APEXPass structure therefore looks like this:
 \item \textbf{Run dg.} Compute data dependencies between instructions.
 \item Find connected components in the computed data dependencies inside
 every function.
-\item Construct call graph, mapping between connected components and functions
+\item Construct a call graph - a mapping between connected components and functions
 that are being called from these components.
-\item Find path from source to target in the call graph.
+\item Find a path from the source to the target in the call graph.
 \item Eliminate dead components and functions that do not depend on the path.
 \item{\textbf{Inject exit and extract function calls into the code.}}
 \item{\textbf{Strip debug symbols from the extracted code.}}
@@ -1846,16 +1811,16 @@ There are multiple steps that need to be executed in order to properly
 run APEXPass. Therefore, we have implemented script apex.py that simplifies
 this process to the absolute minimum.
 
-Running APEXPass via launcher apex.py does require only python3. The following
-example demonstrates how to run APEXPass with the input example.bc, with target
-located in the file example.c on the line 2.
+Running APEXPass via launcher apex.py does require only Python interpreter.
+The following example demonstrates how to run APEXPass with the input
+example.bc, with target located in the file example.c on the line 2.
 
 \begin{minted}[frame=lines,framesep=10pt]{bash}
 python apex.py example.bc example.c 2 --export=true
 \end{minted}
 
 apex.py launcher has three mandatory command line arguments and one optional.
-First argument is input code in the llvm bitcode format. Second argument is the
+First argument is input code in the LLVM bitcode format. Second argument is the
 target file and third is target line of code in the file.
 Optional argument is boolean flag and when set to true, apex.py will
 export call graphs of the input and also the extracted program.
@@ -1868,12 +1833,12 @@ can be run just like any unix executable:
 ./extracted
 }
 
-Besides producing exected executable, apex.py creates build directory with the
-following important files:
+Besides producing expected executable, apex.py also creates build directory
+with the following important files:
 
 \begin{myItemize}
-\item apex.bc: Extracted program in the llvm bitcode format that can be run separately
-via tool lli.
+\item apex.bc: Extracted program in the LLVM bitcode format that can be run
+separately via tool lli.
 \item apex.out: Output of the apex.bc.
 \item apex.log: Log produced by the APEXPass.
 \end{myItemize}
@@ -2380,16 +2345,16 @@ been removed and is no longer part of the extracted binary.
 \chapter{Conclusions}
 \label{chap:conclusions}
 
-In this thesis, we presented the method of extacting parts of programs into
+In this thesis, we presented the method of extracting parts of programs into
 separate binaries. We explained steps and algorithms that the method
 performs to achieve the desired extraction.
 
 We developed a LLVM transform pass (APEXPass) implementing the presented
 method by leveraging the LLVM infrastructure.
 APEXPass was integrated into the open-source tool APEX, which provides the
-user-fiendly experience.
+user-friendly experience.
 
-Lastly, we have tested APEX on one artifically created program and three
+Lastly, we have tested APEX on one artificially created program and three
 classic UNIX tools. Experiments showed, that the method implemented in the APEX
 is sufficient for extracting parts of programs from simple inputs that are
 comparable in complexity to small UNIX tools.
