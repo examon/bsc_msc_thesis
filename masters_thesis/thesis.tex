@@ -1492,41 +1492,48 @@ if.end:                                           ; preds = %if.then, %entry
 \label{sec:impl_apexpass}
 
 % intro
-The method that we described in the \autoref{chap:design} is implemented as a
-LLVM pass called \textbf{APEXPass}.
+The method that we described in \autoref{chap:design} is implemented as a
+LLVM pass called \linebreak \textbf{APEXPass}.
 We have decided to implement the method as an pass because of the great
-capabilities of the LLVM infrastructure. Leveraging LLVM, APEXPass can be ran
-as an optimization step along with other LLVM optimizations or executed
-separately with LLMV optimizer tool opt:
+capabilities provided by the LLVM infrastructure.
+Leveraging LLVM, APEXPass can be ran as an optimization step along with other
+LLVM optimizations or executed separately with LLVM optimizer tool opt:
 
-\begin{minted}[frame=lines,framesep=10pt,breaklines]{bash}
+\begin{minted}[label=running APEXPass with opt,frame=lines,framesep=10pt,breaklines]{bash}
 opt -o apex.bc -load libAPEXPass.so -apex -file=example.c -line=7 < example.bc 2> build/apex.log
 \end{minted}
 
 % apexpass input & output definition
-Using opt command presented above, APEXPass is ran via \textbf{apex} flag and defines
-two command line arguments: file and line.
-Argument \textbf{file} specifies the C source file where is the target located
-(in our case example.c) and argument \textbf{line} specifies number of the line
-in the file (in the example, line number 7).
+Using \mintinline{text}{opt} command presented above, APEXPass is ran via
+\mintinline{text}{apex} flag and defines two command line arguments:
+\mintinline{text}{file} and \mintinline{text}{line}.
+Argument \mintinline{text}{file} specifies the C source file where is the
+target located (in our case \mintinline{text}{example.c}) and argument
+\mintinline{text}{line} specifies number of the line in the file (in the
+example, line number 7).
 
-Input to the opt is the example.bc, which is the bitcode representation of the
-example.c with included source-level debug information. The reason why we need
-debug information included in the example.bc is explained in the
+Input to the \mintinline{text}{opt} is the \mintinline{text}{example.bc}, which
+is the bitcode representation of the \mintinline{text}{example.c} with included
+source-level debug information.
+The reason why we need debug information included in the
+\mintinline{text}{example.bc} is explained in the
 \autoref{sec:impl_inst_locate}.
 
-We can get example.bc by compiling example.c using clang:
+We can get \mintinline{text}{example.bc} by compiling
+\mintinline{text}{example.c} using clang compiler:
 
 \begin{minted}[frame=lines,framesep=10pt]{bash}
 clang -g -c -emit-llvm example.c -o example.bc
 \end{minted}
 
-Another necessary input to the opt is \textbf{libAPEXPass.so}. It is the pass
-itself compiled into the shared library.
+Another necessary input to the \mintinline{text}{opt} is
+\mintinline{text}{libAPEXPass.so}, which is the pass itself compiled into the
+shared library.
 
-APEXPass produces output \textbf{apex.bc}, which is the bitcode representation
-of the extracted part from the example.bc.
-This extracted program can be executed directly with the tool lli as follows:
+APEXPass produces output \mintinline{text}{apex.bc}, which is the bitcode
+representation of the extracted part from the \mintinline{text}{example.bc}.
+This extracted program can be executed directly with the tool
+\mintinline{text}{lli} as follows:
 
 \begin{minted}[frame=lines,framesep=10pt]{bash}
 lli apex.bc
@@ -1546,16 +1553,16 @@ There are some disadvantages that comes to implementing pass as an ModulePass.
 To name a few, function bodies are are referred by no particular order.
 Also, there are no possible
 optimizations to be done for ModulePass because optimizer does not have enough
-information about its behaviors. \cite{llvm-module-pass}
+information about the ModulePass behavior\cite{llvm-module-pass}.
 
 However, these disadvantages are not critical for our purposes and advantages
-of having whole program abstracted as a single unit outweigh the disadvantages.
+of having whole program abstracted as a single unit outweighs the disadvantages.
 
 % === SUB-SECTION: APEXPass structure ==========================================
 \subsection{Structure of the APEXPass}
 
-In order to work correctly, each ModulePass has to override runOnModule method
-with the following signature:
+In order to work correctly, each ModulePass has to override the
+\mintinline{text}{runOnModule} method with the following signature:
 
 \mintinline{C}{
 virtual bool runOnModule(Module &M) = 0;
@@ -1563,10 +1570,9 @@ virtual bool runOnModule(Module &M) = 0;
 
 This method is the main part of the pass and performs computation of the pass.
 All five steps that we described in the \autoref{sec:method_overview} are going
-to be part of the \mintinline{C}{runOnModule} method.
-In this section, we are going to explain
-additional, implementation specific steps that needed to be added to
-the method.
+to be part of the \mintinline{text}{runOnModule} method.
+In this section, we are going to explain additional, implementation specific
+steps that needed to be added to the method.
 
 We add three additional steps on top of the original five method steps
 described in the \autoref{sec:method_overview} (step 1, 7 and 8). We also
@@ -1604,15 +1610,15 @@ code but instead works with the LLVM IR, we need a procedure for mapping
 C source code to the IR.
 
 As we mentioned in the \autoref{sec:method_example}, we know precise position
-of the target in the example.c, but we do knot know exectly what IR
-instructions are equivalent to the target.
+of the target in the \mintinline{text}{example.c}, but we do knot know exactly
+what IR instructions are equivalent to the target.
 
 Taking example from the \autoref{sec:method_example}, we have input program
-example.c and target in the function bar at the line 7.
+\mintinline{text}{example.c} and target in the function bar at the line 7.
 
-The target in the example.c is the following line of code:
-\mintinline{C}{int y = 42;}
-which is represented by the following IR instruction in the example.s:
+The target in the \mintinline{text}{example.c} is the following line of code:
+\mintinline{C}{int y = 42;} which is represented by the following IR
+instruction in the \mintinline{text}{example.s}:
 
 \mintinline{llvm}{
 store i32 42, i32* %y, align 4
@@ -1621,12 +1627,13 @@ store i32 42, i32* %y, align 4
 The way we achieve mapping between original C source code and IR is by
 using source-level debug information that is introduced by the compiler
 (usually with the -g flag).
-The example.s with debug symbols is shown in the \autoref{appendix:example_dbg}.
-Once the example.s is compiled with debug information, we can iterate from within
-the APEXPass over each instruction to find out its parent file name and
-line number using the following code:\cite{llvm-dbg}
+The \mintinline{text}{example.s} with debug symbols is shown in the
+\autoref{appendix:example_dbg}.
+Once the \mintinline{text}{example.s} is compiled with debug information, we
+can iterate from within the APEXPass over each instruction to find out its
+parent file name and line number using the following code:\cite{llvm-dbg}
 
-\begin{minted}[frame=lines,framesep=10pt]{cpp}
+\begin{minted}[label=mapping C line of code to the IR instructions,frame=lines,framesep=10pt]{cpp}
 for (const auto &function : module) {
     for (const auto &basic_block : function) {
         for (const auto &instruction : basic_block) {
@@ -1639,12 +1646,12 @@ for (const auto &function : module) {
 }
 \end{minted}
 
-Once the Line and File match with the user input, we have found our target
-IR instruction.
+Once the \mintinline{text}{Line} and \mintinline{text}{File} match with the
+user input, we have found our target IR instruction.
 
 Depending on how complex the target line of code is, there may be more than one
 IR instructions associated with it. For example, taking the target line number
-7 from the example.c:
+7 from the \mintinline{text}{example.c}:
 
 \mintinline{C}{
 int y = 42;
@@ -1656,7 +1663,7 @@ IR instruction that maps to it is the following:
 store i32 42, i32* %y, align 4
 }
 
-However, when we take as a target line number 2 from the example.c:
+However, when we take as a target line number 2:
 
 \mintinline{C}{
 int x = n + 10;
@@ -1677,13 +1684,12 @@ store i32 %add, i32* %x, align 4
 % === SUB-SECTION: Computing Data Dependencies With dg =========================
 \subsection{dg - Computing Data Dependencies}
 
-As we have mentioned in the \autoref{sec:design-dep}, we have not implemented
+As we have mentioned in \autoref{sec:design-dep}, we have not implemented
 data dependency computation in the APEXPass itself.
 Instead, we use open-source tool by Marek Chalupa called \textbf{dg}\footnote{
 \url{https://github.com/mchalupa/dg}
 }
-to compute data dependencies and get the results that we described in the
-\autoref{sec:design-dep}.
+to compute data dependencies.
 
 \emph{Dg is a library which implements dependence graphs for programs. It
 contains a set of generic templates that can be specialized to user's needs.
@@ -1691,8 +1697,8 @@ As a part of dg, you can find pointer analyses, reaching definitions analysis
 and a static slicer for LLVM.}\cite{dg-github}
 
 Since dg is extensive project that covers more than we need, we use just
-some parts of it, especially LLVMDependenceGraph. This structure provides
-data dependencies which APEXPass requires.
+some parts of it, especially \mintinline{text}{LLVMDependenceGraph}.
+This structure provides data dependencies which APEXPass requires.
 
 % === SUB-SECTION: Injecting Exit and Extract Functions to the Code ============
 \subsection{Injecting Exit and Extract Functions}
@@ -1709,16 +1715,18 @@ In order to accomplish this, we need to inject the following three additional
 instructions right after the target:
 
 \begin{myItemize}
-\item Load instruction X that takes value of the target and stores it into
-the separate register.
-\item Call instruction to extract function with X as an function argument.
+\item Load instruction \mintinline{text}{X} that takes value of the target and
+stores it into the separate register.
+\item Call instruction to extract function with \mintinline{text}{X} as an
+function argument.
 \item Call instruction to exit function which will terminate execution.
 \end{myItemize}
 
-Taking example\_extracted.s from the \autoref{sec:method_example} (with target
+Taking \mintinline{text}{example_extracted.s} from the
+\autoref{sec:method_example} (with the target corresponding to the instruction
 \mintinline{llvm}{store i32 42, i32* %y, align 4}) and injecting exit and
-extract functions after the target gives the final result presented in the
-example\_extracted\_final.s code:
+extract functions after the target produces the final result presented in the
+\mintinline{text}{example_extracted_final.s} code:
 
 \begin{minted}[label=example\_extracted\_final.s,frame=lines,framesep=10pt,linenos]{llvm}
 define i32 @bar() #0 {
@@ -1744,9 +1752,9 @@ entry:
 As we can see on the lines 5,6 and 7, there are three new instructions injected
 right after the target. Instructions at lines 6 and 7 are call instructions
 to the extract and exit functions.
-Because these instructions call external functions, their definitions has to be
-linked to the program. This is done by the apex.py and is discussed in the
-\autoref{sec:impl_launcher}.
+Because these instructions call external functions, their definitions have to
+be linked to the program. This is done by the \mintinline{text}{apex.py} and is
+discussed in the \autoref{sec:impl_launcher}.
 
 Exit function \mintinline{text}{_apex_exit} and extract function
 \mintinline{text}{_apex_extract_int} are implemented in the library
@@ -1765,9 +1773,9 @@ void _apex_extract_int(int i) {
 }
 \end{minted}
 
-Extraction is limited by the type of extracted value. By looking at the
-\mintinline{text}{example extracted final.s}, we can observe that the
-type of \mintinline{llvm}{%y} is \mintinline{llvm}{i32} (integer).
+Extraction is limited by the type of extracted value.
+We observe in the presented code \mintinline{text}{example_extracted_final.s},
+that the type of \mintinline{llvm}{%y} is \mintinline{llvm}{i32} (integer).
 We have to call extraction function that accepts argument of this type.
 Current implementation supports only extraction of values with the integer type
 (more specifically \mintinline{llvm}{i32}).
@@ -1779,10 +1787,12 @@ Current implementation supports only extraction of values with the integer type
 The last step that APEXPass performs is stripping debug information from the
 final code.
 The reason why we do this step is to be sure that the final extracted program
-is in the consistent state. APEXPass works with the code that contains debug symbols.
-Problem is that the three new injected instructions that were presented in the
-\autoref{sub:impl_inject} are without debug symbols. Having parts of the code
-with debug symbols and other parts without creates inconsistent state.
+is in the consistent state. APEXPass works with the code that contains debug
+symbols.
+Problem is that the three newly injected instructions that were presented in
+the \autoref{sub:impl_inject} are not containing debug symbols.
+Having parts of the code with debug symbols and other parts without creates
+inconsistent state.
 Program in this inconsistent state would not be possible to compile into
 bitcode without issues.
 
@@ -1799,7 +1809,7 @@ consistency and because of the ease of the implementation. LLVM provides API\foo
 for stripping debug information from function, therefore we can use the following
 code to strip all debug information from the entire program:
 
-\begin{minted}[frame=lines,framesep=10pt]{cpp}
+\begin{minted}[label=stripping IR module of debug information,frame=lines,framesep=10pt]{cpp}
 for (auto &Function : Module) {
     llvm::stripDebugInfo(Function);
 }
@@ -1810,82 +1820,88 @@ for (auto &Function : Module) {
 \label{sec:impl_launcher}
 
 We have integrated APEXPass into the open-source tool called APEX, which is
-freely accessible in the repository: \url{https://github.com/examon/APEX}.
-APEX serves as an user-friendly wrapper around APEXPass
-while providing an easy way to run APEXPass without leaving user to
-worry about the internal structure.
+freely accessible in the following repository:
+\url{https://github.com/examon/APEX}.
+APEX serves as an user-friendly wrapper around APEXPass and providing an easy
+way to run APEXPass without leaving user to worry about the internal structure.
 
 % === SUB-SECTION: apex.py =====================================================
 \subsection{apex.py}
 
 There are multiple steps that need to be executed in order to properly
-run APEXPass. Therefore, we have implemented script apex.py that simplifies
-this process to the absolute minimum.
+run APEXPass. Therefore, we have implemented script \mintinline{text}{apex.py}
+that simplifies this process to the absolute minimum.
 
-Running APEXPass via launcher apex.py does require only Python interpreter.
+Running APEXPass via launcher \mintinline{text}{apex.py} does require only
+Python interpreter.
 The following example demonstrates how to run APEXPass with the input
-example.bc, with target located in the file example.c on the line 2.
+\mintinline{text}{example.bc}, with target located in the file
+\mintinline{text}{example.c} on the line 2.
 
-\begin{minted}[frame=lines,framesep=10pt]{bash}
+\begin{minted}[label=running APEXPass via apex.py,frame=lines,framesep=10pt]{bash}
 python apex.py example.bc example.c 2 --export=true
 \end{minted}
 
-apex.py launcher has three mandatory command line arguments and one optional.
-First argument is input code in the LLVM bitcode format. Second argument is the
-target file and third is target line of code in the file.
-Optional argument is boolean flag and when set to true, apex.py will
-export call graphs of the input and also the extracted program.
+\mintinline{text}{apex.py} launcher has three mandatory command line arguments
+and one optional.
+First argument is input code in the LLVM bitcode format.
+Second argument is the target file and third is target line of code in the file.
+Optional argument is boolean flag and when set to true,
+\mintinline{text}{apex.py} will export call graphs of the input and also the
+extracted program.
 
-Upon finishing execution, apex.py will create executable called
-\textbf{extracted}. This executable contains extracted part of the program and
-can be run just like any unix executable:
+Upon finishing execution, executable called \textbf{extracted} is created.
+This executable contains extracted part of the program and can be run just like
+any UNIX executable:
 
 \mintinline{text}{
 ./extracted
 }
 
-Besides producing expected executable, apex.py also creates build directory
-with the following important files:
+Besides producing expected executable, \mintinline{text}{apex.py} also creates
+build directory with the following important files:
 
 \begin{myItemize}
-\item apex.bc: Extracted program in the LLVM bitcode format that can be run
-separately via tool lli.
-\item apex.out: Output of the apex.bc.
-\item apex.log: Log produced by the APEXPass.
+\item \mintinline{text}{apex.bc}: Extracted program in the LLVM bitcode format
+that can be run separately via tool \mintinline{text}{lli}.
+\item \mintinline{text}{apex.log}: Log produced by the APEXPass.
 \end{myItemize}
 
 % === SUB-SECTION: linking apexlib =============================================
 \subsection{Linking apexlib and Input}
 
-The important step in the apex.py execution is linking apexlib with the user
+The important step in the APEX execution is linking apexlib with the user
 input. Linking has to be done because apexlib defines exit and extract
 functions and these functions need to be injected after the target
 (\autoref{sub:impl_inject}).
 
-Linking itself is performed in the following three setps:
+Linking itself is performed in the following three steps:
 \begin{myEnumerate}
-\item Compile apexlib.c into the LLVM bitcode apexlib.bc.
+\item Compile \mintinline{text}{apexlib.c} into the LLVM bitcode
+\mintinline{text}{apexlib.bc}.
 
 \mintinline{text}{clang -g -c -emit-llvm apexlib.c -o apexlib.bc}
 
-\item Link apexlib.bc with the user input (e.g. example.bc) and produce linked.ll
-IR code.
+\item Link \mintinline{text}{apexlib.bc} with the user input (e.g.
+\mintinline{text}{example.bc}) and produce \mintinline{text}{linked.ll} IR
+code.
 
 \mintinline{text}{llvm-link apexlib.bc example.bc -S -o=linked.ll}
 
-\item Run assember on the linked.ll and produce bitcode linked.bc.
+\item Run assembler on the \mintinline{text}{linked.ll} and produce bitcode \mintinline{text}{linked.bc}.
 
 \mintinline{text}{llvm-as build/linked.ll -o build/linked.bc}
 
 \end{myEnumerate}
 
-These three steps will essentially take user input example.bc, link to it
-library with the exit and extract functions apexlib.bc and produce output
-linked.bc that will now serve as an input to the APEXPass instead of the original
-input example.bc.
+These three steps will essentially take user input
+\mintinline{text}{example.bc}, link to it library with the exit and extract
+functions \mintinline{text}{apexlib.bc} and produce output
+\mintinline{text}{linked.bc} that will now serve as an input to the APEXPass
+instead of the original input \mintinline{text}{example.bc}.
 
-linked.ll is available for comparison with example.s in the
-\autoref{appendix:linked}.
+\mintinline{text}{linked.ll} is available for comparison with
+\mintinline{text}{example.s} in the \autoref{appendix:linked}.
 
 % === CHAPTER: Experiments =====================================================
 \chapter{Experiments}
@@ -1903,9 +1919,11 @@ program and three well know UNIX utilities.
 \section{\mintinline{text}{example_mod2.c}}
 \label{sec:exp_test}
 
-The first experiment is conducted on the code example\_mod2.c, which we
-introduced in \autoref{subsec:path_branching}. We picked this simple code
-in order to demonstrate the whole process of testing APEX capabilities.
+The first experiment is conducted on the code
+\mintinline{text}{example_mod2.c}, which we introduced in
+\autoref{subsec:path_branching}.
+We picked this simple code in order to demonstrate the whole process of testing
+APEX capabilities.
 
 \begin{minted}[label=example\_mod2.c,frame=lines,framesep=10pt,linenos]{C}
 int foo(int n) {
@@ -1933,16 +1951,16 @@ int main(void) {
 }
 \end{minted}
 
-First, we compile example\_mod2.bc into the LLVM bitcode with debug
-information:
+First, we compile \mintinline{text}{example_mod2.bc} into the LLVM bitcode with
+debug information:
 
 \mintinline{shell}{
 clang -c -g -emit-llvm example_mod2.c -o example_mod2.bc
 }
 
-We run -dot-callgraph pass via opt tool and dot with the following commands to
-generate call graph image from the example\_mod2.bc
-(\autoref{fig:exp_img_mod2}):
+We run \mintinline{text}{-dot-callgraph} pass via \mintinline{text}{opt} tool
+and dot with the following commands to generate call graph image from the
+\mintinline{text}{example_mod2.bc} (\autoref{fig:exp_img_mod2}):
 
 \mintinline{shell}{
 opt -dot-callgraph example_mod2.bc && dot callgraph.dot -Tsvg -O
@@ -1962,7 +1980,8 @@ opt -dot-callgraph example_mod2.bc && dot callgraph.dot -Tsvg -O
 \autoref{fig:exp_img_mod2} serves as as reference for the subsequent stages of
 this experiment.
 Having compiled input with debug symbols successfully, we fulfilled
-requirements for APEX input and can therefore run apex.py to start extraction.
+requirements for APEX input and can therefore run \mintinline{text}{apex.py} to
+start extraction.
 
 % target 16
 \begin{minted}[label=extraction with target line number 16, frame=lines,framesep=10pt,breaklines]{shell}
@@ -1976,10 +1995,11 @@ at the line number 16. When executing extracted binary, we get value of the
 \mintinline{text}{some_int} via injected function
 \mintinline{text}{_apex_extract_int} (which is 10).
 Execution subsequently stops because
-\mintinline{text}{_apex_exit} is called. APEX also generated build/apex.bc
-file, which is the extracted program in the LLVM bitcode format. We can generate
-the call graph using the same method as we did with the example\_mod2.bc and
-get \autoref{fig:exp_img_mod2_target16}.
+\mintinline{text}{_apex_exit} is called. APEX also generated
+\mintinline{text}{build/apex.bc} file, which is the extracted program in the
+LLVM bitcode format.
+We can generate the call graph using the same method as we did with the
+\mintinline{text}{example_mod2.bc} and get \autoref{fig:exp_img_mod2_target16}.
 
 % call graph after apex, target 16
 \begin{figure}[ht]
@@ -2015,7 +2035,8 @@ killed.
 We use source code from the open-source implementation of yes
 from the following repository: \url{https://github.com/mubaris/yes}
 
-Full C source code that implements yes is shown in the yes.c listing:
+Full C source code that implements yes is shown in the \mintinline{text}{yes.c}
+listing:
 
 \begin{minted}[label=yes.c,frame=lines,framesep=10pt,linenos]{C}
 #include <stdio.h>
@@ -2060,8 +2081,9 @@ int main(int argc, char* argv[]) {
 }
 \end{minted}
 
-After compilation yes.c into the bitcode yes.bc, we pick
-\mintinline{C}{int needed_size} from line 17 as a target.
+After compiling \mintinline{text}{yes.c} into the bitcode
+\mintinline{text}{yes.bc}, we pick \mintinline{C}{int needed_size} from line 17
+as a target.
 
 \begin{minted}[label=extraction with target line number 17, frame=lines,framesep=10pt]{shell}
 > python apex.py yes.bc yes.c 17
@@ -2098,8 +2120,8 @@ y
 ...
 \end{minted}
 
-Finally, lets test the else branch of the yes.c by picking line 34 as a target:
-(\mintinline{C}{output_len = 2;}):
+Finally, lets test the else branch of the \mintinline{text}{yes.c} by picking
+line 34 as a target: (\mintinline{C}{output_len = 2;}):
 
 \begin{minted}[label= extraction with target line number 34,frame=lines,framesep=10pt]{shell}
 > python apex.py yes.bc yes.c 34
@@ -2113,7 +2135,7 @@ foo
 \end{minted}
 
 From the performed experimentation, we can conclude that APEX can handle inputs
-with the complexity of the yes.c source code.
+with the complexity of the \mintinline{text}{yes.c} source code.
 
 % === SECTION: domainname.c=====================================================
 \section{\mintinline{text}{domainname.c}}
@@ -2360,7 +2382,7 @@ In this thesis, we presented the method of extracting parts of programs into
 separate binaries. We explained steps and algorithms that the method
 performs to achieve the desired extraction.
 
-We developed a LLVM transform pass (APEXPass) implementing the presented
+We developed a LLVM transform pass (APEXPass) that implements the presented
 method by leveraging the LLVM infrastructure.
 APEXPass was integrated into the open-source tool APEX, which provides the
 user-friendly experience.
@@ -2368,7 +2390,7 @@ user-friendly experience.
 Lastly, we have tested APEX on one artificially created program and three
 classic UNIX tools. Experiments showed, that the method implemented in the APEX
 is sufficient for extracting parts of programs from simple inputs that are
-comparable in complexity to small UNIX tools.
+comparable in complexity to a small UNIX tools.
 
 
 % focus on our specific contributions
@@ -2379,10 +2401,11 @@ comparable in complexity to small UNIX tools.
 \label{sec:conclusions-next}
 
 
-As we mentioned in the \autoref{sub:impl_inject}, extraction is currently
+As we mentioned in \autoref{sub:impl_inject}, extraction is currently
 limited by the type of the extracted value.
 Possible improvement of the extraction procedure would be to implement
-extraction functions for every IR type and thus extending apexlib.c.
+extraction functions for every IR type and thus extending
+\mintinline{text}{apexlib.c}.
 Implementing algorithm able to determine what type of extraction
 function is needed would be crucial in order to support all value types
 for extraction.
@@ -2390,7 +2413,7 @@ for extraction.
 Path finding procedure that we described in \autoref{sec:design-path} could be
 improved by finding multiple paths (not only one) and picking the best fitting
 one for the extraction. The best fitting path could be determined by some
-optimization criteria (e.g. shortest path, path without fewest external
+optimization criteria (e.g. shortest path, path with fewest external
 dependencies, etc.). Finding multiple paths would also help with the branching
 coverage.
 
@@ -2414,12 +2437,12 @@ C programs.
 \label{appendix:archive}
 
 Archive contains APEX source code. Upstream version of the APEX can be found in
-the repository: \url{https://github.com/examon/APEX}
+the following repository: \url{https://github.com/examon/APEX}
 
 Please refer to the \mintinline{text}{README.md} for instructions about building
 and running APEX.
 
-Example source codes used in this thesis are included in the directory
+Examples used in this thesis are included in the directory
 \mintinline{text}{examples}.
 
 
