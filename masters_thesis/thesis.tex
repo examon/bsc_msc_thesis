@@ -267,7 +267,7 @@ We present method that is able to extract part of programs in
 \autoref{chap:design}, while \autoref{chap:implementation} explains specific
 implementation details.
 
-Experiments and results are discussed in the chapter
+Experiments and results are discussed in chapter
 \autoref{chap:experiments}.
 
 Finally, \autoref{chap:conclusions} summarizes the results of this thesis and
@@ -289,15 +289,20 @@ set of low-level tools like Clang compiler, assembler, debugger, etc. \cite{asoa
 
 The main distinguishing feature that separates LLVM from other compiler
 frameworks is its internal structure. LLVM compiler leverages tree-phase
-architecture shown in the \autoref{fig:llvm_arch} to achieve higher degree of
+architecture shown in \autoref{fig:llvm_arch} to achieve high degree of
 flexibility and modularity.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/llvm/llvm_arch.pdf}
-    \caption{LLVM Compiler Architecture.}
+    \caption{
+    LLVM Compiler Architecture.\cite{asoa}
+    }
     \label{fig:llvm_arch}
 \end{figure}
+
+There are three distinct parts of the LLVM architecture show in
+\autoref{fig:llvm_arch}:
 
 \begin{myItemize}
 \item Frontend is responsible for the first phase of compilation. Input code is
@@ -321,18 +326,16 @@ provides those facilities.
 \section{Intermediate Representation}
 \label{sec:llvm-ir}
 
-LLVM assembly language is a Static Single Assignment (SSA)
-\footnote{
+\emph{
+LLVM assembly language is a static single assignment (SSA)\footnote{
 SSA means that each variable is defined before it is being used and is assigned
-exactly once.
+exactly once.\cite{ssa}
 }
-
-based
-representation that provides type safety, low-level operations, flexibility,
-and the capability of representing ‘all’ high-level languages cleanly. It is
-the common code representation used throughout all phases of the LLVM
-compilation strategy.
-\cite{llvm-ir}
+based representation that provides type safety, low-level operations,
+flexibility, and the capability of representing ‘all’ high-level languages
+cleanly. It is the common code representation used throughout all phases of the
+LLVM compilation strategy.\cite{llvm-ir}
+}
 
 LLVM code can be represented by the following three equivalent forms:
 \begin{myEnumerate}
@@ -413,20 +416,25 @@ control flow graph of the function (blocks A and B in \autoref{fig:llvm_module})
 \cite{llvm-ir}
 
 A \textbf{basic block} is a type of a container that contains instructions that
-are executed sequentially.\cite{llvm-bb} Each basic blocks is formed with
-non-terminating instructions and single terminator instruction at the end of
+are executed sequentially\cite{llvm-bb}. Each basic blocks is formed with
+non-terminating instructions and a single terminator instruction at the end of
 the block. Only terminator instructions can terminate a basic block\footnote{
 \url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
 }
 (in the case of \autoref{fig:llvm_module}, terminators would be Instruction 3
 in both basics blocks).
 
-In the case of foo.s, we can see that the function foo contains four basic
-blocks: entry, if.then, if.else and return.
-Basic block entry is special in a way that it is the first basic block in the
-foo function and thus is executed always first. entry basic block is also
-prohibited to have any predecessors unlike for example if.then, which have
-entry as it processor and thus allow branching of the program.
+In the case of \mintinline{text}{foo.s}, we can see that the function
+\mintinline{text}{foo} contains four basic blocks: \mintinline{text}{entry},
+\mintinline{text}{if.then}, \mintinline{text}{if.else} and
+\mintinline{text}{return}.
+
+Basic block \mintinline{text}{entry} is special in a way that it is the first
+basic block in the \mintinline{text}{foo} function and thus is executed always
+first.
+It is also prohibited to have any predecessors, unlike basic block
+\mintinline{text}{if.then}, which have \mintinline{text}{entry} as it predecessor
+and thus allow branching of the program.
 
 \section{Optimizations}
 \label{sec:llvm-opt}
@@ -434,8 +442,8 @@ entry as it processor and thus allow branching of the program.
 LLVM uses the concept of passes for the optimizations. Concrete optimizations
 are implemented in a \textbf{pass} that works with some portion of program code
 (e.g.  module, function, loop, etc.) to collect or transform portion of
-the code.
-\cite{llvm-passes} Pass is a optimization unit that is executed in the second
+the code\cite{llvm-passes}.
+Pass is a optimization unit that is executed in the second
 phase of the compilation process (\autoref{fig:llvm_arch}) or can be executed
 separately with opt tool.\footnote{
 \url{https://llvm.org/docs/CommandGuide/opt.html}
@@ -489,7 +497,7 @@ Clang compiler uses LLVM infrastructure for optimizations and code generation
 Clang AST (Abstract Syntax Tree)\footnote{
 Syntactic structure of the source code represented in as a tree.
 } closely represents the underlying code and does not abstract away elements
-that are useful refactoring tools.\cite{clang-ast}.
+that are useful refactoring tools\cite{clang-ast}.
 
 \begin{minted}[label=add.c,frame=lines,framesep=10pt]{C}
 int add(int a, int b) {
@@ -497,8 +505,8 @@ int add(int a, int b) {
 }
 \end{minted}
 
-Getting the AST from the code above is as simple as running clang with the
-following command line arguments:
+Getting the AST from the code \mintinline{text}{add.c} is as simple as running
+clang with the following command line arguments:
 
 \mintinline{text}{
 clang -Xclang -ast-dump -fsyntax-only add.c
@@ -520,12 +528,13 @@ TranslationUnitDecl 0x622b600 <<invalid sloc>> <invalid sloc>
 \end{minted}
 
 Clang AST provides great value for developers. Nevertheless, instead of the
-AST, we will work in this thesis directly with the IR because it provides
+AST, we will work in this thesis directly with the IR, because it provides
 greater flexibility via LLVM API.\footnote{
 \url{https://llvm.org/doxygen/namespacellvm.html}
 }
 
-Clang also is able to emit IR for the add.c with the following command:
+Clang is also directly able to emit IR for the \mintinline{text}{add.c} with
+the following command:
 
 \mintinline{text}{
 clang -S -emit-llvm ast.c -o ast.s
@@ -582,9 +591,9 @@ We also define \textbf{source} to be an entry to the code
 % what the method does
 
 The method determines what parts of the code to extract according to
-the \emph{source} and the \emph{target}.
-The procedure calculates a possible program path from the \emph{source} to the
-\emph{target} and extracts this program path into a separate, functioning
+the source and the target.
+The procedure calculates a possible program path from the source to the
+target and extracts this program path into a separate, functioning
 executable.
 
 Barring implementation specific details (which are discussed in
@@ -603,7 +612,7 @@ that are being called from these components.
 
 % what is the result of the method
 After the completion of the steps mentioned above, we denote the produced LLVM
-bitcode as \emph{output}.
+bitcode as \textbf{output}.
 This is defined as a part of the original program containing a path from the
 source to the target that is consistent (i.e. that can be compiled
 independently).
@@ -641,8 +650,7 @@ Next, let the input target be the line 7.
 We define source to be the start of the main function.
 Since our method does not work directly with the C source code but instead
 works with the LLVM Intermediate Representation (IR), use clang compiler to
-translate the C code into IR.
-\footnote {
+translate the C code into IR:\footnote {
 Flag \mintinline{text}{-S} tells clang to only run preprocess and
 compilation steps, while \mintinline{text}{-emit-llvm} makes sure to use the LLVM
 representation for assembler and object files. For detailed description of
@@ -700,8 +708,8 @@ entry:
 \end{minted}
 
 % next point
-The target line number \textbf{7} from the \mintinline{text}{example.c}
-corresponds to the line \textbf{16} from the \mintinline{text}{example.s}.
+The target line number 7 from the \mintinline{text}{example.c}
+corresponds to the line 16 from the \mintinline{text}{example.s}.
 
 The procedure for finding mapping between C a code line and its analogous IR
 instruction is described in \autoref{chap:implementation}.
@@ -765,6 +773,10 @@ from $A$ reach uses in $B$.
 From the perspective of our method, the important information comes from data
 dependencies.
 
+We define \textbf{data dependency graph} $G=(V,E)$, where $V$ is a set of
+vertices that correspond to instructions and $E$ is a set of edges that
+correspond to data dependencies between instructions.
+
 The following example demonstrates how data dependencies are used for the
 previously presented \mintinline{text}{example.c} source code.
 Taking closer look specifically at the function \mintinline{text}{main}:
@@ -787,8 +799,6 @@ entry:
 }
 \end{minted}
 
-$V$ is a set of vertices that correspond to instructions and E is a set of
-edges that correspond to data depdencies between instructions.
 
 In order to compute the data dependency graph, we use the \mintinline{text}{dg} library.
 \cite{dg}
@@ -797,8 +807,7 @@ For more info please visit \url{https://github.com/mchalupa/dg} \cite{dg}.
 We will take a closer look at \mintinline{text}{dg} in the
 \autoref{chap:implementation}.
 }
-
-Computed \textbf{data dependency graph} for instructions from the function
+Computed data dependency graph for instructions from the function
 \mintinline{text}{main} is presented in the \autoref{fig:data_deps_graph}.
 This graph is used in the next step of the method for finding
 connected components (\autoref{sec:design-components}).
@@ -848,10 +857,11 @@ of the data dependency graph.
 
 % definitions
 We define a \textbf{connected component} as an isolated subgraph, where
-each pair of vertices is connected by some path. For the computation, we
-treat this subgraph as it would have undirected edges.
+each pair of vertices is connected by some path.
+For the purposes of computation, we treat this subgraph as it would have
+undirected edges.
 
-We use the \textbf{data dependency graph} computed in \autoref{sec:design-dep}
+We use the data dependency graph computed in \autoref{sec:design-dep}
 and we find its connected components using the following algorithm:
 
 \begin{minted}[label=finding components,escapeinside=||,frame=lines,breaklines,framesep=10pt]{text}
@@ -864,8 +874,8 @@ and we find its connected components using the following algorithm:
                they are already in some other component.
 \end{minted}
 
-We run the above mentioned algorithm separately on the \textbf{data dependency
-graph} of each function in the input.
+We run the above mentioned algorithm separately on the data dependency
+graph of each function in the input.
 As an example, we present components for \mintinline{text}{main} function
 in \autoref{fig:connected_components_graph} (for clarity, each component
 is distinguished by its own color).
@@ -890,8 +900,8 @@ instruction is in data dependency relationship with multiple other instructions
 \label{sec:design-callgraph}
 
 %motivation
-The next important part of our method is to compute feasible path from source
-to target that can be taken by the program execution.
+The next important part of our method is to compute feasible path from the source
+to the target that can be taken by the program execution.
 In order to simplify this, we propose to compute a call graph.
 
 % definition
@@ -925,13 +935,13 @@ We construct edges in the call graph using the following algorithm:
                 Add edge (C, X) to E.
 \end{minted}
 
-Running the presented algorithm on the \textbf{data dependence graph}
+Running the presented algorithm on the data dependence graph
 of the \mintinline{text}{main} function that we computed earlier
 (\autoref{fig:connected_components_graph}) produces a call graph structure
 shown in \autoref{fig:call_graph}.
 The \mintinline{text}{main} function contains four distinct components.
-We can see from the computed call graph, that \mintinline{llvm}{@foo} is being
-called from the \emph{yellow} component, and \mintinline{llvm}{@bar} is being
+We can see from the computed call graph, that \mintinline{text}{foo} is being
+called from the \emph{yellow} component, and \mintinline{text}{bar} is being
 called from the \emph{red} component.
 
 \begin{figure}[ht]
@@ -978,7 +988,7 @@ search algorithm.
 \begin{figure}[ht]
     \centering
     \includegraphics[]{images/main_path.pdf}
-    \caption{Path from \textbf{source} to \textbf{target} computed on the
+    \caption{Path from source to target computed on the
     \autoref{fig:call_graph}. Components belonging to the path are \emph{blue}.
     }
     \label{fig:path}
@@ -1026,7 +1036,6 @@ components:
 \end{minted}
 
 % example
-
 After applying the presented algorithm for eliminating dead components on the
 code from \mintinline{text}{example.s} we get the result that is shown
 in \autoref{fig:removing_prepare}.
@@ -1036,14 +1045,23 @@ The \emph{yellow} component with the single instruction stands out.
 This component is not marked as dead and will not be removed because it contains
 a terminator instruction \mintinline{llvm}{ret i32 0}.\footnote{
 \url{https://llvm.org/doxygen/classllvm_1_1TerminatorInst.html}
-More about terminators and why they need special treatment in the
-\autoref{chap:implementation}.
 }
 Finally, all components marked as dead are removed and we are left with the
 code that we presented in \autoref{sec:method_example}
 (\mintinline{text}{example_extracted.s}).
 Call graph of the \mintinline{text}{example_extracted.s} is visualized in
 \autoref{fig:removing_done}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[]{images/main_removing_done.pdf}
+    \caption{
+    \mintinline{text}{example_extracted.s}:
+    Final state after removing dead components and functions.
+    \mintinline{text}{example.s}.
+    }
+    \label{fig:removing_done}
+\end{figure}
 
 \begin{figure}[ht]
     \centering
@@ -1057,19 +1075,7 @@ Call graph of the \mintinline{text}{example_extracted.s} is visualized in
     \label{fig:removing_prepare}
 \end{figure}
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[]{images/main_removing_done.pdf}
-    \caption{
-    \mintinline{text}{example_extracted.s}:
-    Final state after removing dead components and functions.
-    \mintinline{text}{example.s}.
-    }
-    \label{fig:removing_done}
-\end{figure}
-
 % conclusion
-
 Unfortunately, the basic algorithm presented above only works correctly with
 non-complex inputs such as the one in \mintinline{text}{example.s}.
 
@@ -1085,22 +1091,26 @@ improvements of the basic algorithm that help to handle these extensions.
 The first problem is that there may exist a function that is not part of the
 path but that is called by one instruction on the path.
 In such case, when looking upon \autoref{fig:mod1_prepare}, we see that
-function bar calls function qux, but qux is not part of the computed path (only
-components with the blue color are part of the path, that is one component from
-main and one from foo).
+function \mintinline{text}{bar} calls function \mintinline{text}{qux}, but
+\mintinline{text}{qux} is not part of the computed path (only components with
+the \emph{blue} color are part of the path, that is one component from
+\mintinline{text}{main} and one from \mintinline{text}{foo}).
+
 This is problematic for the basic algorithm that we introduced in the
 \autoref{sec:design-removing}.
-This basic algorithm would mark qux as dead and subsequently remove this
-function. However, this would break code integrity, because function qux has to
-be called in order for the execution to correctly proceed.
+This basic algorithm would mark \mintinline{text}{qux} as dead and subsequently
+remove this function.
+However, this would break code integrity, because function
+\mintinline{text}{qux} has to be called in order for the execution to correctly
+proceed.
 Therefore, we propose modified algorithm for eliminating dead components that
 will take into the account the above described possibility.
 
 \begin{minted}[label=eliminating dead components - mod1,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let CS = set of all components in the code
 1. Let PATH = set of components on the path from source to target
-2. Recursively find all called functions that originate from PATH
-   using Breath-first search and add them to the PATH.
+|\textbf{2. Recursively find all called functions that originate from PATH}|
+   |\textbf{using Breath-first search and add them to the PATH.}|
 3. FOR EACH component C in set CS:
       IF component C is not in the set PATH:
          IF component C does not contain terminator:
@@ -1142,19 +1152,21 @@ int main(void) {
 
 Target stays the same line as in the original example from
 \autoref{sec:method_example}.
-In the \mintinline{text}{example_mod1.c} this corresponds to line 11.
+This corresponds to line 11 in the \mintinline{text}{example_mod1.c}.
 
 The LLVM IR of \mintinline{text}{example_mod1.c} is shown in
 \mintinline{text}{example_mod1.s} and its call graph with computed components
 and path can be seen in \autoref{fig:mod1_prepare}.
 
 By using the above described algorithm instead of the basic one from
-\autoref{sec:design-removing}, the path will contain the function qux and
-therefore, the function qux will not be marked as dead and removed.
+\autoref{sec:design-removing}, the path will contain the function
+\mintinline{text}{qux} and therefore, the function \mintinline{text}{qux} will
+not be marked as dead and removed.
 We can see the result of the algorithm in \autoref{fig:mod1_done} with the
 corresponding code in \mintinline{text}{example_mod1_extracted.s}.
-The function qux has not been removed which means that the integrity of the code
-was preserved and an executable could be successfully produced.
+The function \mintinline{text}{qux} has not been removed which means that the
+integrity of the code was preserved and an executable could be successfully
+produced.
 
 % mod1 IR
 \begin{minted}[label=example\_mod1.s,frame=lines,framesep=10pt,linenos]{llvm}
@@ -1261,12 +1273,11 @@ entry:
 
 Another problem comes with usage of branching instructions.
 
-We now introduce branching into the main function of our exampleas shown in
+We now introduce branching into the main function of our examples shown in code
 \mintinline{text}{example_mod2.c}.
-The corresponding LLVM IR is shown in the
-\mintinline{text}{example_mod2.s}, the branch instruction
-occurs at line 42.
-Also, there appear two new basic blocks that this branch instruction
+The corresponding LLVM IR is shown in the \mintinline{text}{example_mod2.s} and
+the branch instruction occurs at line 42.
+Also, there appears two new basic blocks that this branch instruction
 refers to:
 \mintinline{text}{if.then} and \mintinline{text}{if.end} (lines 44 and 49,
 respectively).
@@ -1287,10 +1298,10 @@ described scenario:
 \begin{minted}[label=eliminating dead components - mod2,breaklines,escapeinside=||,frame=lines,framesep=10pt]{text}
 0. Let CS = set of all components in the code
 1. Let PATH = set of components on the path from source to target
-2. FOR EACH component C in PATH:
-      FOR EACH instruction I in C:
-          IF instruction I is part of basic block handled by the branch instruction:
-             FIND component with the branching instruction responsible for I and add it to the PATH
+|\textbf{2. FOR EACH component C in PATH:}|
+      |\textbf{FOR EACH instruction I in C:}|
+          |\textbf{IF instruction I is part of basic block handled by the branch instruction:}|
+             |\textbf{FIND component with the branching instruction responsible for I and add it to the PATH}|
 3. Recursively find all called functions that originate from PATH
    using Breath-first search and add them to the PATH.
 4. FOR EACH component C in set CS:
